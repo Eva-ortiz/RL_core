@@ -146,11 +146,11 @@ make ruff
 make test
 ```
 
-#### Run type checker
+<!-- #### Run type checker
 
 ```{bash}
 make mypy
-```
+``` -->
 
 ### Fonts
 
