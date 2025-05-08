@@ -20,7 +20,6 @@ The repository is structured into the following directories:
 - `/RLcore`: Python source code of the repository.
 - `/tests`: Python code for testing via pytest.
 - `/script`: `.sh` scripts.
-- `/workflows`: set of workflows via Github actions.
 
 Set of workflows via Github Actions already installed:
 
