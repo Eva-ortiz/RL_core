@@ -3,8 +3,8 @@ requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-requires-python = ">=3.9,<3.13"
-name = "template"
+requires-python = ">=3.11,<3.12"
+name = "RLcore"
 # La versión se obtiene automáticamente de git con `setuptools_scm`
 #version = "0.1.0"
 description = "Librería Python de ejemplo"
@@ -19,13 +19,13 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/Komorebi-AI/python-template"
+homepage = "https://github.com/Eva-ortiz/RL_core"
 
 [project.scripts]
-main = "template.main:main"
+main = "RLcore.main:main"
 
 [tool.setuptools]
-packages = ["template"]
+packages = ["RLcore"]
 
 [tool.setuptools_scm]
 # Importante crear esta sección vacia para activar el plugin
@@ -60,7 +60,7 @@ ignore = ["D100"]
 convention = "numpy"
 
 [tool.mypy]
-files = "./template"
+files = "./RLcore"
 strict = true
 warn_unreachable = true
 ignore_missing_imports = true
