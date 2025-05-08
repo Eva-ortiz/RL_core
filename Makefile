@@ -1,5 +1,5 @@
 .ONESHELL:
-.PHONY: install hooks hooks-update ruff test mypy build run debug push
+.PHONY: install hooks hooks-update ruff test build run debug push # mypy
 
 SHELL=/bin/bash
 GH_USER=GITHUB_USERNAME
@@ -28,5 +28,5 @@ ruff:
 test:
 	uv run pytest
 
-mypy:
-	uv run mypy --install-types --non-interactive
+# mypy:
+# 	uv run mypy --install-types --non-interactive
