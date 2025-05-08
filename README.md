@@ -1,7 +1,9 @@
 # Reinforcement Learning core
 
 ![testing workflow](https://github.com/Eva-ortiz/RL_core/actions/workflows/pytest.yml/badge.svg)
-[![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
+
+<!-- [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/) -->
+
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 Python library in Reinforcement Learning algorithm implementation for Gymnasium environments.
@@ -30,7 +32,7 @@ Tools:
 
 - [uv](https://docs.astral.sh/uv/): manage dependencies, Python versions and virtual environments
 - [ruff](https://docs.astral.sh/ruff/): lint and format Python code
-- [mypy](https://mypy.readthedocs.io/): check types
+<!-- - [mypy](https://mypy.readthedocs.io/): check types -->
 - [pytest](https://docs.pytest.org/en/): run unit tests
 - [pre-commit](https://pre-commit.com/): manage pre-commit hooks
 - [prettier](https://prettier.io/): format YAML and Markdown
