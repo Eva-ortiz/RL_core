@@ -19,9 +19,10 @@ The repository is structured into the following directories:
 
 - `/data`: data folder.
 - `/img`: images folder.
+- `/notebook`: notebooks with analysis, experiments or examples.
 - `/RLcore`: Python source code of the repository.
-- `/tests`: Python code for testing via pytest.
 - `/script`: `.sh` scripts.
+- `/tests`: Python code for testing via pytest.
 
 Set of workflows via Github Actions already installed:
 
