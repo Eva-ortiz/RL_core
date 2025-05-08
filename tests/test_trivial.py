@@ -1,6 +1,6 @@
 import pytest
 
-from template.main import print_version
+from RLcore.main import print_version
 
 
 def test_print_version():
