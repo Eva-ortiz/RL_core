@@ -1,6 +1,6 @@
 # Template
 
-![testing workflow](https://github.com/Komorebi-AI/python-template/actions/workflows/pytest.yml/badge.svg)
+![testing workflow](https://github.com/Eva-ortiz/RL_core/actions/workflows/pytest.yml/badge.svg)
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
@@ -10,7 +10,7 @@ Template for Python libraries and applications with Docker packaging. The associ
 
 The repository is structured into the following directories:
 
-- `/template`: Python source code
+- `/RLcore`: Python source code
 - `/tests`: Python code for testing via pytest
 - `/data`: data folder
 
@@ -48,7 +48,7 @@ Install package and pinned dependencies with the [`uv`](https://docs.astral.sh/u
 4. Run any command or Python script with `uv run`, for instance:
 
    ```{bash}
-   uv run template/main.py
+   uv run RLcore/main.py
    ```
 
    Alternatively, you can also activate the virtual env and run the scripts normally:
@@ -62,7 +62,7 @@ Install package and pinned dependencies with the [`uv`](https://docs.astral.sh/u
 Install a specific version of the package with `pip` or `uv pip`:
 
 ```{bash}
-pip install git+ssh://git@github.com/Komorebi-AI/template.git@0.1.0
+pip install git+ssh://git@github.com:Eva-ortiz/RL_core.git@0.0.0
 ```
 
 ## Setup development environment (Unix)
