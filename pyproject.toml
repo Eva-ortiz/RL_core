@@ -16,6 +16,7 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "typer-slim",
+    "gymnasium>=1.1.1",
 ]
 
 [project.urls]
