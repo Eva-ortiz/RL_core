@@ -1,4 +1,5 @@
 # libraries imports
+import datetime as dt
 import logging
 import sys
 import time
@@ -10,6 +11,9 @@ from pathlib import Path
 import pandas as pd
 import tomli
 from matplotlib import pyplot
+
+# custom dtypes
+Timestamp = dt.date | dt.datetime | pd.Timestamp
 
 
 def find_exp(number) -> int:
