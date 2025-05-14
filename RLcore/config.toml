@@ -1,0 +1,29 @@
+[agent.PPO]
+# third position:
+#   * if true, log scale search
+#   * if float, step of change
+#   * if false, default step by optuna
+# CAUTION: names have to be the same than MaskablePPO inputs
+learning_rate = [1e-6, 1e-2, true] # min, max, step
+n_steps = [5, 20, 5]
+batch_size = [8, 32, 8]
+n_epochs = [10, 100, true]
+gamma = [0.1, 1, 0.2]
+gae_lambda = [0.1, 1, 0.2]
+ent_coef = [0.01, 0.1, 0.03]
+
+seed = 0
+
+# learn
+n_envs = 4 # 0 for non vectorized environments
+env_multiprocess = true
+total_timesteps = 1e4
+
+# optuna
+seed_optuna = 0
+n_trials = 20
+
+[environment]
+max_transitions = 500
+
+[environment.reward]
