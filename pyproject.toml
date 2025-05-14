@@ -18,6 +18,7 @@ dependencies = [
     "typer-slim",
     "gymnasium>=1.1.1",
     "stable-baselines3>=2.6.0",
+    "sb3-contrib>=2.6.0",
 ]
 
 [project.urls]

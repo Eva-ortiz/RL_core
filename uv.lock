@@ -1028,12 +1028,13 @@ wheels = [
 
 [[package]]
 name = "rlcore"
-version="0.1.dev26+g13c3675.d20250514"
+version="0.1.dev27+ge527c86.d20250514"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "gymnasium" },
     { name = "pandas" },
+    { name = "sb3-contrib" },
     { name = "stable-baselines3" },
     { name = "typer-slim" },
     { name = "uvicorn" },
@@ -1053,6 +1054,7 @@ requires-dist = [
     { name = "fastapi" },
     { name = "gymnasium", specifier = ">=1.1.1" },
     { name = "pandas" },
+    { name = "sb3-contrib", specifier = ">=2.6.0" },
     { name = "stable-baselines3", specifier = ">=2.6.0" },
     { name = "typer-slim" },
     { name = "uvicorn" },
@@ -1090,6 +1092,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/de/7e/fff70b02e57852fda17bd43f99dda37b9bcf3e1af3d97c5834ff48d04715/ruff-0.11.8-py3-none-win32.whl", hash = "sha256:5b18caa297a786465cc511d7f8be19226acf9c0a1127e06e736cd4e1878c3ea2", size = 10451102 },
     { url = "https://files.pythonhosted.org/packages/7b/a9/eaa571eb70648c9bde3120a1d5892597de57766e376b831b06e7c1e43945/ruff-0.11.8-py3-none-win_amd64.whl", hash = "sha256:6e70d11043bef637c5617297bdedec9632af15d53ac1e1ba29c448da9341b0c4", size = 11597410 },
     { url = "https://files.pythonhosted.org/packages/cd/be/f6b790d6ae98f1f32c645f8540d5c96248b72343b0a56fab3a07f2941897/ruff-0.11.8-py3-none-win_arm64.whl", hash = "sha256:304432e4c4a792e3da85b7699feb3426a0908ab98bf29df22a31b0cdd098fac2", size = 10713129 },
+]
+
+[[package]]
+name = "sb3-contrib"
+version = "2.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "stable-baselines3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/53/53/5acb9ff685a68437329958960886b73425850da02ace63a152781a27ce0d/sb3_contrib-2.6.0.tar.gz", hash = "sha256:eaf7f3268706ee878140decfc743b58e96182e73b5c14872e1c7017ca31e465f", size = 89679 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/0b/2aa9be7796c372d17400d55f90f19ddc5b1b242cb996db0bf9ae6ee370e8/sb3_contrib-2.6.0-py3-none-any.whl", hash = "sha256:7440d2a47dcd2996c6f44286a059245f62433d2565951c445673c6a83742ecc2", size = 92768 },
 ]
 
 [[package]]
