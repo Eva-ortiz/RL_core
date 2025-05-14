@@ -416,9 +416,9 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         )
 
         # remember: defined state must contain `state_cols`
-        assert set(state.index).issubset(
-            set(self.state_cols)
-        ), f"`state` must contain {self.state_cols} state fields."
+        assert set(self.state_cols) == set(
+            state.index
+        ), f"`state` must be composed of {self.state_cols} state fields."
         return state
 
     def _normalize_state_values(self, state: State) -> State_norm:
@@ -436,7 +436,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             Normalized state values.
         """
         # check expected cols are in input state
-        assert set(self.state_cols).issubset(
+        assert set(self.state_cols) == (
             set(state.index)
         ), f"Expected {self.state_cols} in input state."
 
