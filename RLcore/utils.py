@@ -1,10 +1,13 @@
 # libraries imports
 import logging
+import sys
 import time
 import warnings
+from io import StringIO
 from math import floor, log10
 from pathlib import Path
 
+import pandas as pd
 import tomli
 from matplotlib import pyplot
 
@@ -111,6 +114,85 @@ def set_logging(level: str = "debug"):
 
     pil_logger = logging.getLogger("PIL")
     pil_logger.setLevel(logging.INFO)
+
+
+class Capturing(list):
+    """Context manager for capturing stdout.
+
+    References
+    ----------
+    .. [1] https://stackoverflow.com/questions/16571150/how-to-capture-stdout-output-from-a-python-function-call
+    """
+
+    def __enter__(self):
+        """__enter__ method."""
+        self._stdout = sys.stdout
+        sys.stdout = self._stringio = StringIO()
+        return self
+
+    def __exit__(self, *args):
+        """__exit__ method."""
+        self.extend(self._stringio.getvalue().splitlines())
+        del self._stringio  # free up some memory
+        sys.stdout = self._stdout
+
+
+def pretty_series_print(series: pd.Series):
+    """Print series in terminal."""
+    for key, val in series.items():
+        print(key, val)
+
+
+def check_bool_or_int(value: bool | int):
+    """Return input value as bool or int.
+
+    Parameters
+    ----------
+    value : bool | int
+        Value to check
+
+    Returns
+    -------
+    bool_val : bool
+        Input value if bool value, else False
+    int_val : int
+        Input value if int value, else 1
+    """
+    if isinstance(value, bool):
+        bool_val = value
+        int_val = 1
+    elif isinstance(value, int):
+        bool_val = False
+        int_val = value
+    else:
+        raise NotImplementedError("Type of input value not implemented.")
+    return bool_val, int_val
+
+
+def check_bool_or_float(value: bool | float):
+    """Return input value as bool or float.
+
+    Parameters
+    ----------
+    value : bool | float
+        Value to check
+
+    Returns
+    -------
+    bool_val : bool
+        Input value if bool value, else False
+    float_val : float | None
+        Input value if float value, else None
+    """
+    if isinstance(value, bool):
+        bool_val = value
+        float_val = None
+    elif isinstance(value, float):
+        bool_val = False
+        float_val = value
+    else:
+        raise NotImplementedError("Type of input value not implemented.")
+    return bool_val, float_val
 
 
 # --------------- config utils --------------- By Komorebi AI Technologies
