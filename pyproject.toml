@@ -86,4 +86,5 @@ dev-dependencies = [
     "ipykernel",
 ]
 
-
+[tool.codespell]
+ignore-words = "codespell_ignore_words.txt"
