@@ -17,6 +17,7 @@ dependencies = [
     "uvicorn",
     "typer-slim",
     "gymnasium>=1.1.1",
+    "stable-baselines3>=2.6.0",
 ]
 
 [project.urls]
