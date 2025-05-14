@@ -94,14 +94,14 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # load config
         # self.conf = load_conf(conf_path)["environment"]
 
-        # WARNING: `self.state_cols` order is important for the remaining
-        # pipeline
-        self.state_cols = ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
-        self.env_cols = self.state_cols + ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
-
         # store relevant names
         self.action_col = "TODO : str"
         self.state_col_1, self.state_col_2 = "TODO : str", "TODO : str"
+
+        # WARNING: `self.state_cols` order is important for the remaining
+        # pipeline
+        self.state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
+        self.env_cols = self.state_cols + ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
 
         # Store relation between action number and its name, sorted
         # alphabetically
@@ -119,10 +119,12 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # Discrete action space [4 EXAMPLE]
         self.action_space = gym.spaces.Discrete(np.size(action_names), start=0)  # [4]
 
-        # State space composed by 3 continuous values [4 EXAMPLE]
+        # State space composed by continuous values
         # We will usually normalize its values [1]
         self.observation_space = gym.spaces.Box(
-            low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float64
+            low=np.array([-1] * len(self.state_cols)),  # [4 EXAMPLE]
+            high=np.array([1] * len(self.state_cols)),  # [4 EXAMPLE]
+            dtype=np.float64,
         )  # [4]
 
     def action_idx_to_name(self, action_idx: int) -> str:
@@ -272,7 +274,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # ------- UPDATE VALUES -------
         # Store next and not normalized environment info in `current_env`
         self.current_env[self.state_cols] = next_state[self.state_cols]
-        self.current_env[self.env_cols] = "TODO : Any"  # [4 EXAMPLE]
+        self.current_env[self.env_cols] = "TODO : Environment"  # [4 EXAMPLE]
 
         # normalize each variable of the state
         norm_next_state = self._normalize_state_values(
@@ -406,7 +408,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         random_n = self.np_random.random(size=len(self.state_cols))
 
         # get a random value between min and max vals
-        min_val, max_val = 0, 10  # [4 EXAMPLE]
+        min_val, max_val = "TODO : float", "TODO : float"  # [4 EXAMPLE]
         rand_values = (max_val - min_val) * random_n + min_val
 
         state = pd.Series(
@@ -452,11 +454,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         ]
 
         # normalize var1
-        max_var_1 = 6  # [4 EXAMPLE]
+        max_var_1 = "TODO : float"  # [4 EXAMPLE]
         norm_state[var_idx_1] = state[self.state_col_1] / max_var_1
 
         # normalize cyclic var2
-        periodicity_var_2 = 24  # [4 EXAMPLE]
+        periodicity_var_2 = "TODO : float"  # [4 EXAMPLE]
         norm_state[var_idx_2] = np.sin(
             2 * np.pi * state[self.state_col_2] / periodicity_var_2
         )
