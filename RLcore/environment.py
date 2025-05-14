@@ -6,6 +6,7 @@ import gymnasium as gym
 import numpy as np
 import pandas as pd
 from typer import Typer
+from utils import load_conf
 
 Action = int
 Reward = float
@@ -92,7 +93,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self.envidx_logging = f"env {env_idx}: " if env_idx is not None else ""
 
         # load config
-        # self.conf = load_conf(conf_path)["environment"]
+        self.conf = load_conf(conf_path)["environment"]
 
         # store relevant names
         self.action_col = "TODO : str"
