@@ -43,7 +43,7 @@ class RHT(environment):
         self,
         mat_per: np.ndarray,
         freq_range: np.ndarray,
-        cfg_path: Path = Path("./src/config.toml"),
+        cfg_path: Path = Path("./RLcore/config.toml"),
         htc_path: str | None = "./data/HTC",
         n_layers: int = 3,
         start_state: Literal["rand", "zeros"] | str = "zeros",
@@ -68,7 +68,7 @@ class RHT(environment):
             Frequencies of study.
         cfg_path : Path, optional
             Config path.
-            By default, Path("./src/config.toml")
+            By default, Path("./RLcore/config.toml")
         htc_path : Optional[str], optional
             Path where htc values for each state are stored.
             If None, just compute all necessary htc values and do not store them.

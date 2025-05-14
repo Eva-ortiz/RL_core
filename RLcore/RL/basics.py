@@ -12,7 +12,7 @@ class environment(ABC):
     """Basic environment class."""
 
     def __init__(
-        self, cfg_path: Path = Path("./src/config.toml"), seed: int | None = None
+        self, cfg_path: Path = Path("./RLcore/config.toml"), seed: int | None = None
     ):
         """Define basic attributes of environments.
 

@@ -21,7 +21,7 @@ from src.utils import exists, load_conf, set_logging, store_series_to_hdf, timer
 
 def approximated_simulation(
     algorithm: Literal["Sarsa", "Q-learning", "double_Q-learning"],
-    cfg_path: Path = Path("./src/config.toml"),
+    cfg_path: Path = Path("./RLcore/config.toml"),
     save_computed_htc: bool = False,
     save_htc_csv: bool = True,
     save_q_net: bool = True,
@@ -41,7 +41,7 @@ def approximated_simulation(
             * Q-learning
             * double Q-learning
     cfg_path : Path, optional
-        Configuration file path. By default, Path("./src/config.toml").
+        Configuration file path. By default, Path("./RLcore/config.toml").
     save_computed_htc : bool, optional
         Overwrite stored htc values in order to add new computed values. If
         several runs are executed at the same time, this could lead to execution
