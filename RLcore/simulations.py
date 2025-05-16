@@ -303,9 +303,11 @@ if __name__ == "__main__":
     )
     approximated_simulation(
         env="TODO : gym.Env class",
-        algorithm="TODO: Literal['Sarsa', 'Q-learning', 'double_Q-learning']",
-        save_q_net=True,
-        plot=True,
+        train=False,  # allow to train
+        episode_eval=True,  # allow for greedy episode
+        algorithm="TODO : Literal['Sarsa', 'Q-learning', 'double_Q-learning']",
+        monitor_train=True,
         logging_level="warn",
         seed=None,
+        env_kwargs="TODO : env kwargs dict",
     )
