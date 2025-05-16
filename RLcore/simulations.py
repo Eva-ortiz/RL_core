@@ -165,13 +165,10 @@ def approximated_simulation(
     References
     ----------
     .. [1] https://stackoverflow.com/questions/38537905/set-logging-levels
-    .. [2] https://stackoverflow.com/questions/65728037/matplotlib-debug-turn-off-when-python-debug-is-on-to-debug-rest-of-program
-    .. [3] https://docs.python.org/3/library/copy.html
-    .. [4] https://docs.python.org/3/library/logging.html#levels
+    .. [2] https://docs.python.org/3/library/logging.html#levels
     """
-    # set logging level [1], [4]
+    # set logging level [1], [2]
     set_logging(level=logging_level)
-
     verbose = logging_level in ["debug", "info"]
 
     # load the configuration
