@@ -113,6 +113,7 @@ def approximated_simulation(
     train: bool,
     greedy_eval: bool,
     algorithm: Literal["Sarsa", "Q-learning", "double_Q-learning"],
+    monitor_train: bool = True,
     logging_level: str = "warn",
     model_path: Path = Path("./models/"),
     conf_path: str = "./config.toml",
@@ -136,6 +137,9 @@ def approximated_simulation(
             * Sarsa
             * Q-learning
             * double Q-learning
+    monitor_train : bool, optional
+        Monitor training and save monitorization data and plots.
+        By default, True.
     logging_level : str, optional
         Select logging level. Additionally, if `debug`/`info` are selected, set
         verbose to True, else, to False. By default, `warn`.
@@ -222,7 +226,7 @@ def approximated_simulation(
             batch_size=cfg_hiperpar["batch_size"],
             max_steps=cfg_hiperpar["max_steps"],
             tol_loss=cfg_hiperpar["tol_loss"],
-            plot_learning_curves=True,
+            plot_learning_curves=monitor_train,
             save_q_net=True,
             memory_size=cfg_hiperpar.get("memory_size", None),  # only DQN
             n_batch_per_step=cfg_hiperpar.get("n_batch_per_step", None),  # only DQN
