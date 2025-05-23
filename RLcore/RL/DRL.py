@@ -130,6 +130,7 @@ class DRL_agent(agent):
         algorithm: Literal["Sarsa", "Q-learning", "double_Q-learning"],
         actions: Iterable[str, Number],
         save_folder: str = "DRL_results",
+        seed: int | None = None,
         verbose: bool = False,
         **kwargs,
     ):
@@ -150,6 +151,8 @@ class DRL_agent(agent):
         save_folder : str, optional
             Default name of the save folder for the outputs of the algorithm.
             By default, "DRL_outputs"
+        seed : int | None, optional
+            Seed for the pseudo random generators
         verbose : bool, optional
             Select verbose though the algorithm.
             By default, False
@@ -166,7 +169,7 @@ class DRL_agent(agent):
                 By default, 16
         """
         # inherit from parent class
-        super().__init__(algorithm, actions, verbose)
+        super().__init__(algorithm, actions, seed, verbose)
 
         # outputs save folder
         self.save_folder = save_folder
@@ -1395,6 +1398,7 @@ class DQN_agent(DRL_agent):
         algorithm: Literal["Q-learning", "double_Q-learning"],
         actions: Iterable[str],
         save_folder: str = "DRL_results",
+        seed: int | None = None,
         verbose: bool = False,
         **kwargs,
     ):
@@ -1424,6 +1428,7 @@ class DQN_agent(DRL_agent):
             algorithm,
             actions,
             save_folder,
+            seed,
             verbose,
             **kwargs,
         )

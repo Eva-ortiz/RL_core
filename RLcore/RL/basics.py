@@ -99,6 +99,7 @@ class agent(ABC):
         self,
         algorithm: str,
         actions: Iterable[str, Number],
+        seed: int | None = None,
         verbose: bool = True,
         **kwargs,
     ):
@@ -111,6 +112,8 @@ class agent(ABC):
         actions : Iterable[str, Number]
             Set of all possible actions the agent can make in the problem of
             study.
+        seed : int | None, optional
+            Seed for the pseudo random generators
         verbose : bool, optional
             Output info along the code. By default, True.
 
@@ -122,8 +125,15 @@ class agent(ABC):
             init_action_values : pd.DataFrame
                 Storage of action values for all states and actions, i.e.,
                 Q-table.
+
+        See Also
+        --------
+        Stable-Baselines3 BaseAlgorithm
+            Great reference for a BaseAlgorithm.
         """
         self.verbose = verbose
+        self.seed = seed
+
         self.algorithm = algorithm
         self.actions = actions
 
