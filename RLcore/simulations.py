@@ -178,9 +178,9 @@ def approximated_simulation(
     # load the configuration
     cfg = load_conf(conf_path)
     cfg_logging = cfg["logging"]
-    cfg_drl = cfg["DRL"]
-    cfg_algorithm = cfg_drl[algorithm]
-    cfg_hiperpar = cfg_algorithm["RHT"]["hiperparams"]
+    cfg_env = cfg["environment"]
+    cfg_algorithm = cfg["DRL"][algorithm]
+    cfg_hiperpar = cfg_algorithm["hiperparams"]
 
     # We want to be able to train our model on a hardware accelerator like the
     # GPU or MPS, if available.
@@ -216,38 +216,15 @@ def approximated_simulation(
         agent.train(
             device=device,
             environment=train_env,
-            discount_rate=cfg_hiperpar["discount_rate"],
-            lr=cfg_hiperpar["lr"],
-            reduce_perc_lr=cfg_hiperpar["reduce_perc_lr"],
-            min_lr=cfg_algorithm["min_lr"],
-            epsilon=cfg_hiperpar["epsilon"],
-            reduce_eps=cfg_hiperpar["reduce_eps"],
-            min_eps=cfg_algorithm["min_eps"],
-            batch_size=cfg_hiperpar["batch_size"],
-            max_steps=cfg_hiperpar["max_steps"],
-            tol_loss=cfg_hiperpar["tol_loss"],
             plot_learning_curves=monitor_train,
             save_q_net=True,
-            memory_size=cfg_hiperpar.get("memory_size", None),  # only DQN
-            n_batch_per_step=cfg_hiperpar.get("n_batch_per_step", None),  # only DQN
-            n_new_experiences_per_step=cfg_hiperpar.get(
-                "n_new_experiences_per_step", None
-            ),  # only DQN
-            target_estimation_mode=cfg_hiperpar.get(
-                "target_estimation_mode", None
-            ),  # only DQN
-            n_steps_for_target_net_update=cfg_hiperpar.get(
-                "n_steps_for_target_net_update", None
-            ),  # only DQN
-            episode_start_state=cfg_hiperpar["episode_start_state"],
-            decorrelated=cfg_hiperpar["decorrelated"],
-            step_count=cfg_hiperpar["step_count"],
-            reward_curve_mode=cfg["RHT"]["plots"]["reward_curve_mode"],
-            reward_curve_steps_per_point=cfg["RHT"]["plots"][
+            reward_curve_mode=cfg_env["plots"]["reward_curve_mode"],
+            reward_curve_steps_per_point=cfg_env["plots"][
                 "reward_curve_steps_per_point"
             ],
             debug_counter=cfg_logging["debug_counter"],
             seed=seed,
+            **cfg_hiperpar["train"],
         )
 
         # print execution time of this problem
@@ -271,7 +248,7 @@ def approximated_simulation(
             q_net=agent.q_net,
             environment=eval_env,  # [3]
             start_state=cfg_hiperpar["episode_start_state"],
-            steps=cfg["environment"]["max_episode_steps"],
+            steps=cfg_env["max_episode_steps"],
             device=device,
         )
 
