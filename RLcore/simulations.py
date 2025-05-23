@@ -179,8 +179,7 @@ def approximated_simulation(
     cfg = load_conf(conf_path)
     cfg_logging = cfg["logging"]
     cfg_env = cfg["environment"]
-    cfg_algorithm = cfg["DRL"][algorithm]
-    cfg_hiperpar = cfg_algorithm["hiperparams"]
+    cfg_hiperpar = cfg["DRL"][algorithm]["hiperparams"]
 
     # We want to be able to train our model on a hardware accelerator like the
     # GPU or MPS, if available.
