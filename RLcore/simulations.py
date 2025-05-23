@@ -271,7 +271,7 @@ def approximated_simulation(
             q_net=agent.q_net,
             environment=eval_env,  # [3]
             start_state=cfg_hiperpar["episode_start_state"],
-            steps=eval_env.n_layers * 10,
+            steps=cfg["environment"]["max_episode_steps"],
             device=device,
         )
 

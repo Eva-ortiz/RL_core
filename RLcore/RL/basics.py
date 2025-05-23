@@ -25,8 +25,8 @@ class environment(ABC):
 
         terminal_state : Optional[Union[str, Iterable, Number]], optional
             Terminal state for an episode of the environment, if necessary.
-        n_episode_steps : Optional[int], optional
-            Number of steps which defines an episode, if necessary.
+        max_episode_steps : Optional[int], optional
+            Maximum number of steps which defines an episode, if necessary.
         episode_count : int, optional
             Count of the steps taken in the episode, if necessary.
 
@@ -42,7 +42,7 @@ class environment(ABC):
         self.start_state = None
 
         self.terminal_state = None
-        self.n_episode_steps = None
+        self.max_episode_steps = None
 
         # initialize episode count
         self.episode_count = 0

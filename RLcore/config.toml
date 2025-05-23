@@ -5,6 +5,7 @@ debug_counter = 1000
 # ----------- environment generic config -----------
 [environment]
 max_transitions = 500
+max_episode_steps = 64
 
 [environment.reward]
 
@@ -16,7 +17,6 @@ layer_width_nm = 5
 
 n_layers = 16
 
-n_episode_steps = 64
 start_state = "zeros" # + info: `environment.__init__`
 
 htc_path = "./data/HTC"
