@@ -5,7 +5,7 @@ import warnings
 from collections import deque, namedtuple
 from collections.abc import Iterable
 from numbers import Number
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import torch
@@ -178,9 +178,9 @@ class DRL_agent(agent):
         self,
         q_net: QNN,
         environment: environment,
-        start_state: str,
         steps: int,
         device: Literal["cuda", "mps", "cpu"],
+        reset_options: dict[str, Any] | None = None,
         step_count: bool = False,
     ) -> tuple[float, float, float, str, str]:
         """Greedy simulation with current Q network and reset environment.
@@ -199,6 +199,9 @@ class DRL_agent(agent):
             stop before the simulation.
         device : Literal["cuda", "mps", "cpu"], optional
             Currently used device for training. Used as an `act` method input.
+        reset_options : dict[str, Any] | None, optional
+            Additional information to specify how the environment is reset. By
+            default, None.
         step_count : bool, optional
             Select to have an steps counter.
             Specially useful for those algorithms which do not have a natural
@@ -235,7 +238,7 @@ class DRL_agent(agent):
         best_reward = -np.inf
 
         # reset the environment for this simulation and select start state
-        state_label = environment.reset(init_layers=start_state)
+        state_label = environment.reset(options=reset_options)
 
         # generate the simulation
         while step < steps or end_episode:
