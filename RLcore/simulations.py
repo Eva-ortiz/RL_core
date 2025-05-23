@@ -238,7 +238,7 @@ def approximated_simulation(
         agent = agent_class(
             algorithm=algorithm,
             actions=eval_env._action_name_dict.values(),
-            save_folder=cfg_algorithm["RHT"]["generic_save_folder"],
+            save_folder=f"{algorithm}_results",
             verbose=verbose,
             hidden_layers=cfg_hiperpar["hidden_layers"],
             hidden_neur=cfg_hiperpar["hidden_neur"],
