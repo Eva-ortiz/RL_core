@@ -1,4 +1,4 @@
-from src.utils import scientific_notation_label
+from utils import scientific_notation_label
 
 
 def HTC_units_label(reduction_factor: int | None = None):

@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import axes, figure
-from src.RL_simulations.global_vars import PLOT_FONT
-from src.utils import InputError, exists
+from utils import InputError, exists
+
+from RLcore.global_vars import PLOT_FONT
 
 # set matplotlib font
 plt.rcParams["font.family"] = PLOT_FONT

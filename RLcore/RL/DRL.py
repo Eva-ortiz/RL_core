@@ -12,10 +12,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from src.RL.basics import agent
-from src.RL.plots import learning_curve
-from src.RL.utils import HTC_units_label
-from src.utils import InputError, exists, str_to_tuple_or_list
+from basics import agent
+from plots import learning_curve
+from utils import HTC_units_label
+
+from RLcore.utils import InputError, exists, str_to_tuple_or_list
 
 transition = namedtuple("transition", ("state", "action_idx", "reward", "next_state"))
 sarsa_transition = namedtuple(
