@@ -206,7 +206,7 @@ def approximated_simulation(
         # create the new agent with selected algorithm
         agent = agent_class(
             algorithm=algorithm,
-            actions=train_env.action_space,
+            actions=train_env._action_name_dict.values(),
             save_folder=model_path,
             verbose=verbose,
             hidden_layers=cfg_hiperpar["hidden_layers"],
@@ -237,7 +237,7 @@ def approximated_simulation(
         # create the new agent with selected algorithm
         agent = agent_class(
             algorithm=algorithm,
-            actions=eval_env.action_space,
+            actions=eval_env._action_name_dict.values(),
             save_folder=cfg_algorithm["RHT"]["generic_save_folder"],
             verbose=verbose,
             hidden_layers=cfg_hiperpar["hidden_layers"],
