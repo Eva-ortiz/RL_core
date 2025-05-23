@@ -195,7 +195,8 @@ class DRL_agent(agent):
         start_state : str
             Start state of the simulation.
         steps : int
-            Number of steps of the simulation.
+            Maximum number of steps of the simulation. If `end_episode` reached,
+            stop before the simulation.
         device : Literal["cuda", "mps", "cpu"], optional
             Currently used device for training. Used as an `act` method input.
         step_count : bool, optional
