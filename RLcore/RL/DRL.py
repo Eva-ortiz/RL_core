@@ -7,11 +7,12 @@ from collections.abc import Iterable
 from numbers import Number
 from typing import Any, Literal
 
+import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from src.RL.basics import agent, environment
+from src.RL.basics import agent
 from src.RL.plots import learning_curve
 from src.RL.utils import HTC_units_label
 from src.utils import InputError, exists, str_to_tuple_or_list
@@ -177,7 +178,7 @@ class DRL_agent(agent):
     def greedy_simulation(
         self,
         q_net: QNN,
-        environment: environment,
+        environment: gym.Env,
         steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
@@ -283,7 +284,7 @@ class DRL_agent(agent):
         self,
         n_experiences: int,
         q_net: QNN,
-        environment: environment,
+        environment: gym.Env,
         device: Literal["cuda", "mps", "cpu"],
         epsilon: float,
         initial_state: Literal["rand"] | str,
@@ -627,7 +628,7 @@ class DRL_agent(agent):
     def train(
         self,
         device: Literal["cuda", "mps", "cpu"],
-        environment: environment,
+        environment: gym.Env,
         discount_rate: float = 0.99,
         lr: float = 0.1,
         epsilon: float = 1.0,
@@ -1119,7 +1120,7 @@ class DRL_agent(agent):
     def _update_max_htc_vs_known_state(
         self,
         experience: namedtuple,
-        environment: environment,
+        environment: gym.Env,
         known_states_list: list[str],
         discovered_best_htc: float,
         discovered_best_reward: float,
@@ -1211,7 +1212,7 @@ class DRL_agent(agent):
 
     def _update_reward_curves(
         self,
-        environment: environment,
+        environment: gym.Env,
         q_net: QNN,
         episode_start_state: str,
         step: int,
@@ -1430,7 +1431,7 @@ class DQN_agent(DRL_agent):
     def train(
         self,
         device: Literal["cuda", "mps", "cpu"],
-        environment: environment,
+        environment: gym.Env,
         discount_rate: float = 0.99,
         lr: float = 0.1,
         epsilon: float = 1.0,
