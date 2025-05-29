@@ -474,12 +474,12 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         )
         return norm_state
 
-    def _termination(self, state_norm: State_norm) -> bool:
+    def _termination(self, state: State) -> bool:
         """Return a flag indicating if termination has been reached.
 
         Parameters
         ----------
-        state_norm : State_norm
+        state : State
             State to check if it is a terminal state.
 
         Returns
@@ -492,7 +492,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             self.termination_condition == "TODO : StrEnum"
             or self.termination_condition == "TODO : StrEnum"
         ):
-            terminated = "TODO : boolean comparison with input state_norm (e.g.)"
+            terminated = "TODO : boolean comparison with state input (e.g.)"
         else:
             raise NotImplementedError(
                 f"{self.termination_condition} termination not implemented."
