@@ -391,13 +391,13 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         return np_actions_mask.tolist()
 
-    def _random_env_state(self) -> State:
+    def _random_env_state(self) -> Environment:
         """Create a random environment state.
 
         Returns
         -------
-        State
-            Random state.
+        Environment
+            Description of the environment.
 
         Notes
         -----
@@ -406,21 +406,21 @@ class ENV(gym.Env):  # type: ignore[type-arg]
           initializes environment's PRNG. [10]
         """
         # generate random numbers
-        random_n = self.np_random.random(size=len(self.state_cols))
+        random_n = self.np_random.random(size=len(self.env_cols))
 
         # get a random value between min and max vals
         min_val, max_val = "TODO : float", "TODO : float"  # [4 EXAMPLE]
-        rand_values = (max_val - min_val) * random_n + min_val
+        rand_values = (max_val - min_val) * random_n + min_val  # [4 EXAMPLE]
 
-        state = pd.Series(
-            {self.state_cols[idx]: val for idx, val in enumerate(rand_values)}
+        env = pd.Series(
+            {self.env_cols[idx]: val for idx, val in enumerate(rand_values)}
         )
 
         # remember: defined state must contain `state_cols`
-        assert set(self.state_cols) == set(
-            state.index
-        ), f"`state` must be composed of {self.state_cols} state fields."
-        return state
+        assert set(self.env_cols) == set(
+            env.index
+        ), f"Environment must be composed of {self.env_cols} fields."
+        return env
 
     def _normalize_state_values(self, state: State) -> State_norm:
         """Normalize each one of the state variables.
