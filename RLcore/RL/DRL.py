@@ -362,7 +362,7 @@ class DRL_agent(agent):
         the environment.
         """
         # if input initial state is a terminal state, require a new input
-        if initial_state == environment.terminal_state:
+        if environment._termination(initial_state):
             raise InputError("Initial state provided is a terminal state.")
 
         # if input initial action has more than one element, require the user to
@@ -388,9 +388,9 @@ class DRL_agent(agent):
         for _ in range(n_experiences):
             # if decorrelated selected, randomly select next state
             if decorrelated:
-                state_label = environment.random_state_label_choice()
-                while state_label == environment.terminal_state:
-                    state_label = environment.random_state_label_choice()
+                state = environment._random_env_state()
+                while environment._termination(state):
+                    state = environment._random_env_state()
 
             # store visited states
             visited_states.add(state_label)
