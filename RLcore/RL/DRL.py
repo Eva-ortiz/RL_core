@@ -295,11 +295,11 @@ class DRL_agent(agent):
         ----------
         n_experiences : int
             Number of experiences to generate.
-        environment : environment
-            Environment object of the problem.
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
+        environment : ENV
+            Environment object of the problem.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
         epsilon : float
@@ -314,8 +314,7 @@ class DRL_agent(agent):
             Select to store and follow a' along all experiencies generation.
             By default, False.
         decorrelated : bool, optional
-            Select if experience samples are decorrelated.
-            If True, they will be decorrelated.
+            Select if experience samples are decorrelated. If True, they will.
             By default, False.
 
         ** kwargs
