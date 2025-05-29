@@ -63,7 +63,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     def __init__(
         self,
         action_names: np.typing.ArrayLike,
-        start_env: Environment | None = None,
+        start_env: Environment | Literal["random"] = "random",
         env_idx: int | None = None,
         conf_path: str = "./config.toml",
     ) -> None:
@@ -73,10 +73,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         ----------
         action_names : np.typing.ArrayLike
             Set of action names that can be performed.
-        start_env : Environment | None, optional
-            Information about the starting point of the environment. If None
+        start_env : Environment | Literal["random"], optional
+            Information about the starting point of the environment. If "random"
             instead of pd.Series, pick a random starting point.
-            By default, None.
+            By default, "random".
         env_idx : int | None, optional
             Index of environment. Useful to keep track of logging of each
             environment when vectorized environments are used. If None, do not
@@ -349,7 +349,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         # initialize some counters, store current and initial environment and
         # state info, and initialize visited actions memory
-        norm_current_state = self._setup(start_env=self.init_env, mode=Setup_mode.RESET)
+        norm_current_state = self._setup(mode=Setup_mode.RESET)
 
         return norm_current_state, info
 
