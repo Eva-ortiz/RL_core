@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from basics import agent
-from environment import ENV, Reward, State_norm
+from environment import ENV, Action, Reward, State, State_norm
 from plots import learning_curve
 from utils import HTC_units_label
 
@@ -277,11 +277,11 @@ class DRL_agent(agent):
         self,
         n_experiences: int,
         q_net: QNN,
-        environment: gym.Env,
+        environment: ENV,
         device: Literal["cuda", "mps", "cpu"],
         epsilon: float,
-        initial_state: Literal["rand"] | str,
-        initial_action: dict[str, int] | None = None,
+        initial_state: State | State_norm,
+        initial_action: Action | None,
         follow_next_action: bool = False,
         decorrelated: bool = False,
         **kwargs,
@@ -305,13 +305,11 @@ class DRL_agent(agent):
         epsilon : float
             Value of epsilon in epsilon greedy policy. With higher
             epsilon, more exploratory behaviour of the policy.
-        initial_state : Literal["rand"], str
+        initial_state : State | State_norm
             State to initialize the generation of experiences from.
-            If "rand", create a random initial state.
-        initial_action : Optional[dict[str,int]], optional
-            First action with label as key and index as value of experience
-            generation. If None, select an action according to epsilon_greedy
-            behaviour policy. By default, None.
+        initial_action : Action | None
+            First action index. If None, select an action according to
+            epsilon_greedy behaviour policy.
         follow_next_action : bool, optional
             Select to store and follow a' along all experiencies generation.
             By default, False.
