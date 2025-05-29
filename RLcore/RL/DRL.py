@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from basics import agent
-from environment import ENV, Action, Reward, State, State_norm
+from environment import ENV, Action, Reward, Setup_mode, State, State_norm
 from plots import learning_curve
 from utils import HTC_units_label
 
@@ -386,14 +386,18 @@ class DRL_agent(agent):
         visited_states = set()
         reached_states = set()
         for _ in range(n_experiences):
-            # if decorrelated selected, randomly select next state
+            # if decorrelated selected, randomly select next state and set the
+            # environment to this state
             if decorrelated:
-                state = environment._random_env_state()
-                while environment._termination(state):
-                    state = environment._random_env_state()
+                # Reset the environment setting start env/state to None and
+                # current env to a random state. In addition, reset some
+                # counters.
+                state_norm = environment._setup(
+                    mode=Setup_mode.INIT, start_env="random"
+                )
 
             # store visited states
-            visited_states.add(state_label)
+            visited_states.add(state_norm)
 
             # if action has been generated and selected to follow or provided as
             # input, follow it
