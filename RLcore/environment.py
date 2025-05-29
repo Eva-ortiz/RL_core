@@ -137,7 +137,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         return list(self._action_name_dict.values()).index(action_name)
 
     def _setup(
-        self, mode: Setup_mode, start_env: Environment | Literal["random"] = None
+        self,
+        mode: Setup_mode,
+        start_env: Environment | Literal["random"] = None,
+        current_env: Environment | None = None,
     ) -> State_norm:
         """Initialize the environment with init and reset methods.
 
@@ -152,6 +155,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             Indicate starting environment.
             Only necessary in "INIT" mode, where init env and state are defined.
             If "RESET", current env and state will return to init values.
+        current_env : : Environment | None, optional
+            Set the environment to arbitrary `current_env`. Useful when we want
+            to preserve initial env/state defs, but want to allocate the agent
+            into an specific environment state, different from the initial.
 
         Warnings
         --------
@@ -191,9 +198,22 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                     start_env[self.state_cols]
                 )
 
+        # set current environment to that specified, ignoring `init_env` and
+        # `init_state` info
+        if current_env is not None:
+            if not set(current_env.index).issubset(set(self.env_cols)):
+                raise ValueError(
+                    f"`current_env` must contain {self.env_cols} environment fields."
+                )
+            self.current_env = current_env
+            # compute norm_init_state for later return
+            norm_init_state = self._normalize_state_values(
+                self.current_env[self.state_cols]
+            )
+
         # in randomly initialized environment, `init_state` is None together
         # with `init_env`
-        if self.init_env is None and self.init_state is None:
+        elif self.init_env is None and self.init_state is None:
             # define a random current environment state
             current_env = self._random_env_state()
             while self._termination(current_env):
