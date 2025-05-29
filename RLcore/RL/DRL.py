@@ -236,7 +236,7 @@ class DRL_agent(agent):
         best_reward = -np.inf
 
         # reset the environment for this simulation and select start state
-        state_label = environment.reset(options=reset_options)
+        state_norm, _ = environment.reset(seed=self.seed, options=reset_options)
 
         # generate the simulation
         while step < steps or end_episode:
@@ -244,7 +244,7 @@ class DRL_agent(agent):
             # optimality of the `q_net`
             action_idx, _, action_label = self._act(
                 "greedy",
-                state_label,
+                state_norm,
                 q_net=q_net,
                 device=device,
             )
