@@ -206,10 +206,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                     f"`current_env` must contain {self.env_cols} environment fields."
                 )
             self.current_env = current_env
-            # compute norm_init_state for later return
-            norm_init_state = self._normalize_state_values(
-                self.current_env[self.state_cols]
-            )
+            # compute norm_state for later return
+            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
 
         # in randomly initialized environment, `init_state` is None together
         # with `init_env`
@@ -219,17 +217,16 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             while self._termination(current_env):
                 current_env = self._random_env_state()
             self.current_env = current_env
+            # compute norm_state for later return
+            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
 
-            # compute norm_init_state for later return
-            norm_init_state = self._normalize_state_values(
-                self.current_env[self.state_cols]
-            )
         # in static initial env, `init_state` is NOT None together with `init_env`
         elif self.init_env is not None and self.init_state is not None:
             # set current environment as start environment
             self.current_env = self.init_env.copy(deep=True)
-            # define norm_current_state for later return
-            norm_init_state = self.init_state
+            # define norm_state for later return
+            norm_state = self.init_state
+
         else:
             raise AssertionError(
                 "Start environment and state are inconsistently defined."
@@ -242,7 +239,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self._visited_actions_memory = {
             self.action_name_to_idx(self.current_env[self.action_col])
         }
-        return norm_init_state
+        return norm_state
 
     def step(
         self, action: Action
