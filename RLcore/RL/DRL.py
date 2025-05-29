@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from basics import agent
+from environment import ENV, Reward, State_norm
 from plots import learning_curve
 from utils import HTC_units_label
 
@@ -180,12 +181,11 @@ class DRL_agent(agent):
     def greedy_simulation(
         self,
         q_net: QNN,
-        environment: gym.Env,
+        environment: ENV,
         steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
-        step_count: bool = False,
-    ) -> tuple[float, float, float, str, str]:
+    ) -> tuple[float, Reward, Reward, State_norm, str]:
         """Greedy simulation with current Q network and reset environment.
 
         Parameters
@@ -193,7 +193,7 @@ class DRL_agent(agent):
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
-        environment : environment
+        environment : ENV
             Environment object of the problem.
         start_state : str
             Start state of the simulation.
@@ -205,25 +205,20 @@ class DRL_agent(agent):
         reset_options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset. By
             default, None.
-        step_count : bool, optional
-            Select to have an steps counter.
-            Specially useful for those algorithms which do not have a natural
-            terminal state, so it is implemented as an episode length.
-            By default, False, so step count is inactive.
 
         Returns
         -------
         overall_return : float
-            Value of the return for the simulation.
-        last_reward : float
+            Value of the return for the greedy simulation.
+        last_reward : Reward
             Value of the last reward of the simulation.
-        best_reward : float
+        best_reward : Reward
             Value of the best reward seen during the simulation.
-        last_state : str
-            Last state visited. Useful to continue the trajectory of (s, a, r,
-            s') generated.
+        last_state_norm : State_norm
+            Last visited state (normalized). Useful to continue the trajectory
+            of (s, a, r, s') generated.
         last_action : str
-            Last action performed. For informative purposes.
+            Label of the last action performed. For informative purposes.
 
         Warnings
         --------
@@ -247,7 +242,7 @@ class DRL_agent(agent):
         while step < steps or end_episode:
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
-            _, _, action_label = self._act(
+            action_idx, _, action_label = self._act(
                 "greedy",
                 state_label,
                 q_net=q_net,
@@ -255,9 +250,7 @@ class DRL_agent(agent):
             )
 
             # observe response of the environment
-            state_label, reward, end_episode = environment.step(
-                state_label, action_label, step_count=step_count
-            )
+            state_norm, reward, terminated, truncated, _ = environment.step(action_idx)
 
             # store best reward of the simulation
             if reward > best_reward:
@@ -266,21 +259,19 @@ class DRL_agent(agent):
             # store the return of the simulation
             overall_return += reward
 
-            if end_episode:
+            if terminated or truncated:
+                reason_str = "TERMINATED" if terminated else "TRUNCATED"
                 warnings.warn(
-                    f"Simulation finalized at step {step} due to end of episode.",
+                    f"Simulation finalized at step {step} due to {reason_str} episode.",
                     stacklevel=1,
                 )
                 break
 
             step += 1
 
-        # store last reward value and last state and action labels
-        last_reward = reward
-        last_state = state_label
-        last_action = action_label
-
-        return overall_return, last_reward, best_reward, last_state, last_action
+        # output the return, last reward value, best reward value and last state
+        # (normalized) and last action label
+        return overall_return, reward, best_reward, state_norm, action_label
 
     def _experience_generation(
         self,
