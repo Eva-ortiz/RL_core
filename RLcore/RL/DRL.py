@@ -17,9 +17,12 @@ from utils import HTC_units_label
 
 from RLcore.utils import InputError, str_to_tuple_or_list
 
-transition = namedtuple("transition", ("state", "action_idx", "reward", "next_state"))
+transition = namedtuple(
+    "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
+)
 sarsa_transition = namedtuple(
-    "transition", ("state", "action_idx", "reward", "next_state", "next_action")
+    "transition",
+    ("state_norm", "action_idx", "reward", "next_state_norm", "next_action_idx"),
 )
 
 
@@ -285,7 +288,13 @@ class DRL_agent(agent):
         follow_next_action: bool = False,
         decorrelated: bool = False,
         **kwargs,
-    ) -> tuple[list[namedtuple], tuple[str], tuple[str], str, dict[str, int] | None]:
+    ) -> tuple[
+        list[namedtuple],
+        tuple[State_norm],
+        tuple[State_norm],
+        State_norm,
+        Action | None,
+    ]:
         """Generate experiences consisting of states, actions and rewards.
 
         Used to train the agent. The generated values depends of the target
@@ -328,17 +337,17 @@ class DRL_agent(agent):
         -------
         experiences : list[namedtuple]
             List which contains each one of the experiences, composed by
-            (state_label, action_index, reward_value, next_state_label).
-            If follow_next_action, also include next_action.
-        visited_states : tuple[srt]
-            Tuple of visited states.
-        reached_states : tuple[srt]
-            Tuple of reached states, useful when the reward is computed as a
-            function of the next state.
-        last_next_state : str
-            Last state s' visited. Useful to continue the trajectory of (s, a, r,
-            s') generated.
-        last_next_action : Optional[dict[str, int]]
+            (state_norm, action_idx, reward, next_state_norm).
+            If follow_next_action, also include next_action_idx.
+        visited_states : tuple[State_norm]
+            Tuple of visited states (normalized).
+        reached_states : tuple[State_norm]
+            Tuple of reached states (normalized), useful when the reward is
+            computed as a function of the next state.
+        last_next_state : State_norm
+            Last state s' (normalized) visited. Useful to continue the
+            trajectory of (s, a, r, s') generated.
+        last_next_action : Action | None
             Last action a' performed. Useful to continue the sequence of
             generated experiences.
 
