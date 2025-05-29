@@ -182,7 +182,7 @@ class DRL_agent(agent):
         self,
         q_net: QNN,
         environment: ENV,
-        steps: int,
+        max_steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
     ) -> tuple[float, Reward, Reward, State_norm, str]:
@@ -195,9 +195,9 @@ class DRL_agent(agent):
             state.
         environment : ENV
             Environment object of the problem.
-        steps : int
+        max_steps : int
             Maximum number of steps of the simulation. If `end_episode` reached,
-            stop before the simulation.
+            previously stop the simulation.
         device : Literal["cuda", "mps", "cpu"], optional
             Currently used device for training. Used as an `act` method input.
         reset_options : dict[str, Any] | None, optional
@@ -239,7 +239,7 @@ class DRL_agent(agent):
         state_norm, _ = environment.reset(seed=self.seed, options=reset_options)
 
         # generate the simulation
-        while step < steps or (not terminated and not truncated):
+        while step < max_steps or (not terminated and not truncated):
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
             action_idx, _, action_label = self._act(
