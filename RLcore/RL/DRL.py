@@ -195,8 +195,6 @@ class DRL_agent(agent):
             state.
         environment : ENV
             Environment object of the problem.
-        start_state : str
-            Start state of the simulation.
         steps : int
             Maximum number of steps of the simulation. If `end_episode` reached,
             stop before the simulation.
@@ -227,7 +225,9 @@ class DRL_agent(agent):
 
         See Also
         --------
-        environment.py : Where environment.reset() method is defined.
+        environment.py : where environment.reset() method is defined.
+        MaskablePPO_custom.greedy_simulation : where an example implementation
+        of `greedy_simulation` can be seen for inspo.
         """
         # initialize some parameters
         step = 1
