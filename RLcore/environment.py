@@ -136,7 +136,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         """Translate action name to the idx of the action space."""
         return list(self._action_name_dict.values()).index(action_name)
 
-    def _setup(self, start_env: Environment | None, mode: Setup_mode) -> State_norm:
+    def _setup(self, mode: Setup_mode, start_env: Environment | None) -> State_norm:
         """Initialize the environment with init and reset methods.
 
         Initialize some counters, store current and initial environment and
@@ -144,12 +144,12 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         Parameters
         ----------
-        start_env : Environment | None
-            Indicate starting environment.
-                * For "INIT" mode, `start_env`
-                * For "RESET" mode, `self.init_env`
         mode : Setup_mode
             Select to proceed for `init` or `reset` method.
+        start_env : Environment | None
+            Indicate starting environment.
+            Only necessary in "INIT" mode, where init env and state are defined.
+            If "RESET", env and state will return to their initial values.
         """
         # initilaize the counter for the number of transitions of the
         # environment
@@ -170,13 +170,13 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             elif mode == Setup_mode.RESET:
                 # check `init_state` is None together with `init_env`
                 assert (
-                    self.init_state is None
+                    self.init_env is None and self.init_state is None
                 ), "`init_env` and `init_state` must be both None."
 
             # define a random environment state
             self.current_env = self._random_env_state()
-            # compute norm_current_state for later return
-            norm_current_state = self._normalize_state_values(
+            # compute norm_init_state for later return
+            norm_init_state = self._normalize_state_values(
                 self.current_env[self.state_cols]
             )
 
@@ -197,13 +197,13 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             elif mode == Setup_mode.RESET:
                 # check `init_state` is NOT None together with `init_env`
                 assert (
-                    self.init_state is not None
+                    self.init_env is not None and self.init_state is not None
                 ), "`init_env` and `init_state` must be no one None."
 
             # set current environment as start environment
-            self.current_env = start_env.copy(deep=True)
+            self.current_env = self.init_env.copy(deep=True)
             # define norm_current_state for later return
-            norm_current_state = self.init_state
+            norm_init_state = self.init_state
 
         # initialize visited actions memory
         # CAUTION: initial action must be added to memory as it will be always
@@ -212,7 +212,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self._visited_actions_memory = {
             self.action_name_to_idx(self.current_env[self.action_col])
         }
-        return norm_current_state
+        return norm_init_state
 
     def step(
         self, action: Action
