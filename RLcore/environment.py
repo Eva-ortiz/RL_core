@@ -1,6 +1,6 @@
 import logging
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 import gymnasium as gym
 import numpy as np
@@ -136,7 +136,9 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         """Translate action name to the idx of the action space."""
         return list(self._action_name_dict.values()).index(action_name)
 
-    def _setup(self, mode: Setup_mode, start_env: Environment | None) -> State_norm:
+    def _setup(
+        self, mode: Setup_mode, start_env: Environment | Literal["random"] = None
+    ) -> State_norm:
         """Initialize the environment with init and reset methods.
 
         Initialize some counters, store current and initial environment and
@@ -146,10 +148,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         ----------
         mode : Setup_mode
             Select to proceed for `init` or `reset` method.
-        start_env : Environment | None
+        start_env : Environment | Literal["random"], optional
             Indicate starting environment.
             Only necessary in "INIT" mode, where init env and state are defined.
-            If "RESET", env and state will return to their initial values.
+            If "RESET", current env and state will return to init values.
         """
         # initilaize the counter for the number of transitions of the
         # environment
@@ -161,49 +163,47 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # store and initialize the information about the current environment,
         # relevant for the network training and for storing the step of the
         # environment in a dictionary
-        if start_env is None:
-            # if INIT mode...
-            if mode == Setup_mode.INIT:
+        if mode == Setup_mode.INIT:
+            # not valid input
+            if start_env is None:
+                raise ValueError(
+                    "`start_env` must be provided to define initial env and state"
+                )
+            # random start env
+            elif start_env == "random":
                 # set both initial state and env as None due to its randomness
                 self.init_env, self.init_state = None, None
-            # elif RESET mode...
-            elif mode == Setup_mode.RESET:
-                # check `init_state` is None together with `init_env`
-                assert (
-                    self.init_env is None and self.init_state is None
-                ), "`init_env` and `init_state` must be both None."
-
-            # define a random environment state
-            self.current_env = self._random_env_state()
-            # compute norm_init_state for later return
-            norm_init_state = self._normalize_state_values(
-                self.current_env[self.state_cols]
-            )
-
-        else:
-            assert set(start_env.index).issubset(
-                set(self.env_cols)
-            ), f"`start_env` must have {self.env_cols} environment fields."
-
-            # if INIT mode...
-            if mode == Setup_mode.INIT:
-                # additionally define the initial environment
+            # input start env
+            else:
+                assert set(start_env.index).issubset(
+                    set(self.env_cols)
+                ), f"`start_env` must have {self.env_cols} environment fields."
+                # define the initial environment
                 self.init_env = start_env
                 # and the initial state
                 self.init_state = self._normalize_state_values(
                     start_env[self.state_cols]
                 )
-            # elif RESET mode...
-            elif mode == Setup_mode.RESET:
-                # check `init_state` is NOT None together with `init_env`
-                assert (
-                    self.init_env is not None and self.init_state is not None
-                ), "`init_env` and `init_state` must be no one None."
 
+        # in randomly initialized environment, `init_state` is None together
+        # with `init_env`
+        if self.init_env is None and self.init_state is None:
+            # define a random current environment state
+            self.current_env = self._random_env_state()
+            # compute norm_init_state for later return
+            norm_init_state = self._normalize_state_values(
+                self.current_env[self.state_cols]
+            )
+        # in static initial env, `init_state` is NOT None together with `init_env`
+        elif self.init_env is not None and self.init_state is not None:
             # set current environment as start environment
             self.current_env = self.init_env.copy(deep=True)
             # define norm_current_state for later return
             norm_init_state = self.init_state
+        else:
+            raise AssertionError(
+                "Start environment and state are inconsistently defined."
+            )
 
         # initialize visited actions memory
         # CAUTION: initial action must be added to memory as it will be always
