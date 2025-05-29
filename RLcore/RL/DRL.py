@@ -372,14 +372,14 @@ class DRL_agent(agent):
                 "More than one initial action provided, please select just one."
             )
 
-        # set state as initial state
-        state_label = (
+        # obtain normalized state from initial state
+        state_norm = (
             initial_state
             if isinstance(initial_state, State_norm)
             else environment._normalize_state_values(initial_state)
         )
         # set action as initial action
-        action = initial_action
+        action_idx = initial_action
 
         # store generated experiences
         experiences = []
@@ -399,80 +399,78 @@ class DRL_agent(agent):
             # store visited states
             visited_states.add(state_norm)
 
-            # if action has been generated and selected to follow or provided as
-            # input, follow it
-            if action is not None:
-                action_label, action_index = list(action.items())[0]
-
-            # else, choose action with behaviour policy
-            else:
-                action_index, _, action_label = self._act(
+            # if action has not been provided as input, choose action with
+            # behaviour policy
+            if action_idx is None:
+                action_idx, _, _ = self._act(
                     "epsilon_greedy",
-                    state_label,
+                    state_norm,
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
                 )
 
             # observe response of the environment
-            next_state_label, reward, end_episode = environment.step(
-                state_label, action_label, **kwargs
+            next_state_norm, reward, terminated, truncated, _ = environment.step(
+                action_idx
             )
             # store reached states
-            reached_states.add(next_state_label)
+            reached_states.add(next_state_norm)
 
             # store the transition
             if not follow_next_action:
                 experiences.append(
-                    transition(state_label, action_index, reward, next_state_label)
+                    transition(state_norm, action_idx, reward, next_state_norm)
                 )
 
-            # store sarsa transition if follow_next_action is selected
-            if follow_next_action:
+            # store sarsa transition if track_next_action is selected
+            else:
                 # perform next action too
-                next_action_index, _, next_action_label = self._act(
+                next_action_idx, _, _ = self._act(
                     "epsilon_greedy",
-                    next_state_label,
+                    next_state_norm,
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
                 )
-                next_action = {next_action_label: next_action_index}
 
                 # store next action in transition
                 experiences.append(
                     sarsa_transition(
-                        state_label,
-                        action_index,
+                        state_norm,
+                        action_idx,
                         reward,
-                        next_state_label,
-                        next_action,
+                        next_state_norm,
+                        next_action_idx,
                     )
                 )
 
             # consider the end of the episode or continue from next state
-            state_label = environment.reset() if end_episode else next_state_label
+            state_norm, _ = (
+                environment.reset(options=kwargs.get("reset_options"))
+                if terminated or truncated
+                else next_state_norm
+            )
 
             # If follow_next_action is selected, force reset action to None if
-            # end_episode has been reached. Otherwise, set action to None.
+            # terminated or truncated has been reached. Otherwise, set action to
+            # next_action.
             if follow_next_action:
-                action = None if end_episode else next_action
+                action_idx = None if terminated or truncated else next_action_idx
 
             # set action to None once its input has been employed, so we do not
             # get stuck in the initial action for follow_next_action = False
             else:
-                action = None
+                action_idx = None
 
-        # store final visited state and next action
-        last_next_state = state_label
-        last_next_action = action
-
+        # output stored experiences, visited and reached states, in addition to
+        # the final visited state and next action
         return (
             experiences,
             visited_states,
             reached_states,
-            last_next_state,
-            last_next_action,
+            state_norm,
+            action_idx,
         )
 
     def _act(
