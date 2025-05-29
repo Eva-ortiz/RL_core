@@ -3,8 +3,6 @@ import logging
 import random
 import warnings
 from collections import deque, namedtuple
-from collections.abc import Iterable
-from numbers import Number
 from typing import Any, Literal
 
 import gymnasium as gym
@@ -129,7 +127,7 @@ class DRL_agent(agent):
     def __init__(
         self,
         algorithm: Literal["Sarsa", "Q-learning", "double_Q-learning"],
-        actions: Iterable[str, Number],
+        actions: np.typing.ArrayLike,
         save_folder: str = "DRL_results",
         seed: int | None = None,
         verbose: bool = False,
@@ -147,7 +145,7 @@ class DRL_agent(agent):
                 * double Q-learning
         states : Iterable[str, Number]
             Collection of all possible states of the problem.
-        actions : Iterable[str, Number]
+        actions : np.typing.ArrayLike
             Collection of all possible actions of the problem.
         save_folder : str, optional
             Default name of the save folder for the outputs of the algorithm.
@@ -1397,7 +1395,7 @@ class DQN_agent(DRL_agent):
     def __init__(
         self,
         algorithm: Literal["Q-learning", "double_Q-learning"],
-        actions: Iterable[str],
+        actions: np.typing.ArrayLike,
         save_folder: str = "DRL_results",
         seed: int | None = None,
         verbose: bool = False,

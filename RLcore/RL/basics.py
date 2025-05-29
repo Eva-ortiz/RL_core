@@ -5,6 +5,7 @@ from numbers import Number
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 from environment import State_norm
 from utils import load_conf
 
@@ -99,7 +100,7 @@ class agent(ABC):
     def __init__(
         self,
         algorithm: str,
-        actions: Iterable[str, Number],
+        actions: np.typing.ArrayLike,
         seed: int | None = None,
         verbose: bool = True,
         **kwargs,
@@ -110,7 +111,7 @@ class agent(ABC):
         ----------
         algorithm : str
             Determine the RL algorithm to use.
-        actions : Iterable[str, Number]
+        actions : np.typing.ArrayLike
             Set of all possible actions the agent can make in the problem of
             study.
         seed : int | None, optional
