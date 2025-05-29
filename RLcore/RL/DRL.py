@@ -231,7 +231,7 @@ class DRL_agent(agent):
         """
         # initialize some parameters
         step = 1
-        end_episode = False
+        terminated, truncated = False, False
         overall_return = 0
         best_reward = -np.inf
 
@@ -239,7 +239,7 @@ class DRL_agent(agent):
         state_norm, _ = environment.reset(seed=self.seed, options=reset_options)
 
         # generate the simulation
-        while step < steps or end_episode:
+        while step < steps or (not terminated and not truncated):
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
             action_idx, _, action_label = self._act(
