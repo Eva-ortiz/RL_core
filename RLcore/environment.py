@@ -222,7 +222,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         Parameters
         ----------
         action : Action
-            [MANDATORY INPUT] Input action index.
+            Input action index.
             Correspondence between idx representation of the action and action
             name is given by `_action_name_dict` attribute.
 
