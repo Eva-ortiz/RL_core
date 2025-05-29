@@ -5,6 +5,7 @@ from numbers import Number
 from pathlib import Path
 from typing import Literal
 
+from environment import State_norm
 from utils import load_conf
 
 
@@ -141,7 +142,7 @@ class agent(ABC):
     def _act(
         self,
         mode: Literal["greedy", "epsilon_greedy"],
-        state: str | Iterable | Number,
+        norm_state: State_norm,
         **kwargs,
     ) -> tuple[str | Number, Number]:
         """Return the action that the agent takes given an state.
@@ -152,8 +153,8 @@ class agent(ABC):
         ----------
         mode : Literal["greedy", "epsilon_greedy"]
             Mode of acting.
-        state : Union[str, Iterable, Number]
-            Current state of the agent.
+        state : State_norm
+            Normalized current state of the agent.
         **kwargs :
                 epsilon : float
                     Value of epsilon in epsilon greedy policy. With higher
