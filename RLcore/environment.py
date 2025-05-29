@@ -152,6 +152,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             Indicate starting environment.
             Only necessary in "INIT" mode, where init env and state are defined.
             If "RESET", current env and state will return to init values.
+
+        Warnings
+        --------
+        * We skip the possibility of setting current env/state as a terminal
+          state to avoid buggy behaviours.
         """
         # initilaize the counter for the number of transitions of the
         # environment
@@ -189,7 +194,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # with `init_env`
         if self.init_env is None and self.init_state is None:
             # define a random current environment state
-            self.current_env = self._random_env_state()
+            current_env = self._random_env_state()
+            while self._termination(current_env):
+                current_env = self._random_env_state()
+            self.current_env = current_env
+
             # compute norm_init_state for later return
             norm_init_state = self._normalize_state_values(
                 self.current_env[self.state_cols]
