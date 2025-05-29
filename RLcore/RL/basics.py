@@ -5,7 +5,7 @@ from numbers import Number
 from pathlib import Path
 from typing import Literal
 
-from utils import exists, load_conf
+from utils import load_conf
 
 
 class environment(ABC):
@@ -35,7 +35,7 @@ class environment(ABC):
         """
         self.cfg = load_conf(cfg_path)
         # fix seed if indicated
-        if exists(seed):
+        if seed is not None:
             random.seed(seed)
 
         self.state_space = None

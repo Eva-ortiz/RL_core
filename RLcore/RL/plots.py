@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import axes, figure
-from utils import InputError, exists
+from utils import InputError
 
 from RLcore.global_vars import PLOT_FONT
 
@@ -42,14 +42,14 @@ def save_fig_df(
     .. [2] https://stackoverflow.com/questions/23177439/how-to-check-if-a-dictionary-is-empty
     """
     # check df or x/y are given, not both
-    if exists(x) and exists(y) and exists(df):
+    if x is not None and y is not None and df is not None:
         raise InputError("Only `df` or `x` and `y` must be provided.")
 
-    if exists(x) and exists(y):
+    if x is not None and y is not None:
         # save figure data
         dict_fig = {xlabel: x, ylabel: y}
         df_fig = pd.DataFrame(dict_fig)
-    elif exists(df):
+    elif df is not None:
         df_fig = df
     else:
         raise InputError(
@@ -108,10 +108,10 @@ class learning_curve:
         self.performance = np.append(self.performance, performance)
         self.iterations = np.append(self.iterations, iteration)
 
-        if exists(learning_rate):
+        if learning_rate is not None:
             self.learning_rate = np.append(self.learning_rate, learning_rate)
 
-        if exists(epsilon):
+        if epsilon is not None:
             self.epsilon = np.append(self.epsilon, epsilon)
 
     def plot(
@@ -230,9 +230,9 @@ class learning_curve:
             ylabel2 = "Epsilon and learning rate"
 
         # add optional horizontal/vertical lines
-        if exists(hline):
+        if hline is not None:
             ax.axhline(hline, color="g", linestyle=":")
-        if exists(vline):
+        if vline is not None:
             ax.axvline(vline, color="g", linestyle=":")
 
         # set plot parameters [1], [2]
@@ -243,7 +243,7 @@ class learning_curve:
             ax.set_ylim(ylim[0], ylim[1])
         ax.set_xlabel(xlabel, fontsize=labels_fontsize)
         ax.set_ylabel(ylabel, fontsize=labels_fontsize)
-        if exists(ax2):
+        if ax2 is not None:
             ax2.set_ylabel(
                 ylabel2, fontsize=labels_fontsize, rotation=270, va="bottom"
             )  # [3]
@@ -251,7 +251,7 @@ class learning_curve:
         ax.legend(plot_lines, labels, fontsize=labels_fontsize)
 
         # if selected, save the created figure
-        if exists(save_path):
+        if save_path is not None:
             fig.savefig(save_path, bbox_inches="tight", dpi=800)
             save_fig_df(
                 save_path,
@@ -407,7 +407,7 @@ class mean_learning_curve(learning_curve):
 
         # if selected, save again the figure, adding standard deviation
         save_path = kwargs.get("save_path")
-        if exists(save_path):
+        if save_path is not None:
             fig.savefig(save_path, bbox_inches="tight", dpi=800)
             save_fig_df(
                 save_path,
@@ -473,7 +473,7 @@ class merge_learning_curves_figs(learning_curve):
             )
 
             # if we want to fill shorter learning curve
-            if exists(curve_fill):
+            if curve_fill is not None:
                 self.curves_performance = []
                 self.curves_std = []
                 for learn_curve in learning_curves:
@@ -600,7 +600,7 @@ class merge_learning_curves_figs(learning_curve):
             ax.plot(iterations, performance, label=label)
 
             # if selected, save the data of the figure
-            if exists(save_path):
+            if save_path is not None:
                 filename = Path(save_path).stem  # [1]
                 curve_path = save_path.replace(filename, f"{filename}_{label}")
                 save_fig_df(
@@ -613,9 +613,9 @@ class merge_learning_curves_figs(learning_curve):
                 )
 
         # add optional horizontal/vertical lines
-        if exists(hline):
+        if hline is not None:
             ax.axhline(hline, color="g", linestyle=":")
-        if exists(vline):
+        if vline is not None:
             ax.axvline(vline, color="g", linestyle=":")
 
         # set plot parameters
@@ -629,7 +629,7 @@ class merge_learning_curves_figs(learning_curve):
         ax.legend(fontsize=labels_fontsize)
 
         # if selected, save the created figure
-        if exists(save_path):
+        if save_path is not None:
             fig.savefig(save_path, bbox_inches="tight", dpi=800)
 
         return fig, ax

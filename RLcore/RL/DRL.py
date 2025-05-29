@@ -16,7 +16,7 @@ from basics import agent
 from plots import learning_curve
 from utils import HTC_units_label
 
-from RLcore.utils import InputError, exists, str_to_tuple_or_list
+from RLcore.utils import InputError, str_to_tuple_or_list
 
 transition = namedtuple("transition", ("state", "action_idx", "reward", "next_state"))
 sarsa_transition = namedtuple(
@@ -376,7 +376,7 @@ class DRL_agent(agent):
 
         # if input initial action has more than one element, require the user to
         # select just one
-        if exists(initial_action) and len(initial_action) > 1:
+        if initial_action is not None and len(initial_action) > 1:
             raise InputError(
                 "More than one initial action provided, please select just one."
             )
@@ -406,7 +406,7 @@ class DRL_agent(agent):
 
             # if action has been generated and selected to follow or provided as
             # input, follow it
-            if exists(action):
+            if action is not None:
                 action_label, action_index = list(action.items())[0]
 
             # else, choose action with behaviour policy
@@ -761,7 +761,7 @@ class DRL_agent(agent):
         """
         # fix seed
         seed = kwargs.get("seed")
-        if exists(seed):
+        if seed is not None:
             random.seed(seed)
             torch.manual_seed(seed)
 
@@ -839,7 +839,7 @@ class DRL_agent(agent):
         # initialize learning curves
         loss_curve = learning_curve()
         reward_curves = []
-        if exists(reward_curve_steps_per_point):
+        if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
                 reward_curves.append(learning_curve())
 
@@ -1003,7 +1003,7 @@ class DRL_agent(agent):
             loss_curve.update(loss.item(), step, learning_rate=lr, epsilon=epsilon)
 
             # update reward curves
-            if exists(reward_curve_steps_per_point):
+            if reward_curve_steps_per_point is not None:
                 self._update_reward_curves(
                     environment,
                     q_net,
@@ -1047,7 +1047,7 @@ class DRL_agent(agent):
 
         self.loss_curve = loss_curve
         self.max_htc_vs_known_state = max_htc_vs_known_state
-        if exists(reward_curve_steps_per_point):
+        if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "return":
                     self.reward_curve_return = reward_curves[idx]
@@ -1512,7 +1512,7 @@ class DQN_agent(DRL_agent):
         """
         # fix seed
         seed = kwargs.get("seed")
-        if exists(seed):
+        if seed is not None:
             random.seed(seed)
             torch.manual_seed(seed)
 
@@ -1638,7 +1638,7 @@ class DQN_agent(DRL_agent):
         # initialize learning curves
         loss_curve = learning_curve()
         reward_curves = []
-        if exists(reward_curve_steps_per_point):
+        if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
                 reward_curves.append(learning_curve())
 
@@ -1828,7 +1828,7 @@ class DQN_agent(DRL_agent):
 
             # make a small simulation to get the rewards of the net for an
             # episode
-            if exists(reward_curve_steps_per_point):
+            if reward_curve_steps_per_point is not None:
                 overall_return, last_reward, _, _, _ = self.greedy_simulation(
                     q_net=q_net,
                     environment=copy.deepcopy(environment),
@@ -1879,7 +1879,7 @@ class DQN_agent(DRL_agent):
 
         self.loss_curve = loss_curve
         self.max_htc_vs_known_state = max_htc_vs_known_state
-        if exists(reward_curve_steps_per_point):
+        if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "return":
                     self.reward_curve_return = reward_curves[idx]
@@ -1921,7 +1921,7 @@ class DQN_agent(DRL_agent):
                 save_path=f"./img/{self.save_folder}/Max_htc_per_known_state_{environment.n_layers}.png",
             )
 
-            if exists(reward_curve_steps_per_point):
+            if reward_curve_steps_per_point is not None:
                 for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                     if reward_curve_mode_ == "return":
                         reward_ylabel = f"Return ({units_label})"
