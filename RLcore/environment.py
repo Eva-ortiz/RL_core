@@ -391,13 +391,13 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         return np_actions_mask.tolist()
 
-    def _random_env_state(self) -> Environment:
+    def _random_env_state(self) -> State:
         """Create a random environment state.
 
         Returns
         -------
-        Environment
-            Description of the environment.
+        State
+            Random state.
 
         Notes
         -----
