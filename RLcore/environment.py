@@ -162,8 +162,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         Warnings
         --------
-        * We skip the possibility of setting current env/state as a terminal
-          state to avoid buggy behaviours.
+        * We skip the possibility of randomly setting current env/state as a
+          terminal state to avoid buggy behaviours.
         """
         # initilaize the counter for the number of transitions of the
         # environment
