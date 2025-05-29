@@ -327,11 +327,9 @@ class DRL_agent(agent):
             By default, False.
 
         ** kwargs
-            step_count : bool, optional
-                Select to have an steps counter.
-                Specially useful for those algorithms which do not have a
-                natural terminal state, so it is implemented as an episode
-                length.
+            reset_options : dict, optional
+                Additional information to specify how the environment is reset
+                (depending on the specific environment). By default, None.
 
         Returns
         -------
@@ -355,11 +353,16 @@ class DRL_agent(agent):
         --------
         * `State` and `State_norm` dtypes must be different or initial state
           normalization will not be applied.
+        * Pay A LOT of attention to environment state track:
+          `step` does not have the state as input, so we have to be very careful
+          with how we determine the state we want to make the step from.
 
         See Also
         --------
-        environment.py
-            Where kwargs such as `step_count` will be applied as input.
+        environment
+            Where kwargs such as `reset_options` will be applied as input. Its
+            methods are also crucial for the correct functioning of this
+            experience generation.
 
         Notes
         -----
@@ -368,7 +371,7 @@ class DRL_agent(agent):
         * Decorrelated transitions are given through random sampling of states.
           Several authors recommend this practice.
         * We will skip transitions that starts at the terminal state, defined by
-        the environment.
+          the environment (see `environment._setup`).
         """
         # if input initial state is a terminal state, require a new input
         if environment._termination(initial_state):
