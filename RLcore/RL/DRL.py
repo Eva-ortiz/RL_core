@@ -644,44 +644,36 @@ class DRL_agent(agent):
             Discount rate factor for Reinforcement Learning algorithm.
             By default, 0.99
         lr : float, optional
-            Value of the learning rate.
-            By default, 0.1
+            Value of the learning rate. By default, 0.1
         epsilon : float, optional
             Initial value of epsilon for epsilon greedy policies.
             By default, 1.0
         batch_size : int, optional
             Size of the batch for training the neural network for the prediction
-            of the action-state values.
-            By default, 64
+            of the action-state values. By default, 64
         max_steps : int, optional
             Maximum number of steps to iterate policy evaluation.
             By default, np.inf
         tol_loss : float, optional
-            Tolerance to consider action values have converged.
-            By default, 0.0
+            Tolerance to consider action values have converged. By default, 0.0
         plot_learning_curves : bool, optional
-            Select to plot learning curves or not.
-            By default, True
+            Select to plot learning curves or not. By default, True
         save_q_net : bool, optional
-            Select to save the action-state values network.
-            By default, True.
+            Select to save the action-state values network. By default, True.
 
         Other Parameters
         ----------------
         **kwargs
             reduce_eps : float, optional
-                Amount to reduce epsilon at each iteration.
-                By default, 1e-3
+                Amount to reduce epsilon at each iteration. By default, 1e-3
             min_eps : float, optional
-                Minimum value of epsilon.
-                By default, 0.0
+                Minimum value of epsilon. By default, 0.0
 
             reduce_perc_lr : float, optional
                 Percentage to reduce learning rate at each iteration.
                 By default, 0.0001
             min_lr : float, optional
-                Minimum value of learning rate.
-                By default, 0.0
+                Minimum value of learning rate. By default, 0.0
 
             reward_curve_mode : list[str], optional
                 List with the selection of the rewards to record at `reward_curve`:
@@ -707,9 +699,8 @@ class DRL_agent(agent):
                 By default, "initial".
 
             decorrelated : bool, optional
-                Select if batch samples are decorrelated.
-                If True, they will be decorrelated.
-                By default, False.
+                Select if batch samples are decorrelated. If True, they will be
+                decorrelated. By default, False.
             step_count : bool, optional
                 Select to have a steps counter. Specially useful for those
                 algorithms which do not have a natural terminal state, so it is
@@ -722,8 +713,7 @@ class DRL_agent(agent):
 
             seed : int, optional
                 Seed number for random and torch modules. If None, do not fix
-                any seed.
-                By default, None.
+                any seed. By default, None.
 
         Warns
         -----
