@@ -342,6 +342,11 @@ class DRL_agent(agent):
             Last action a' performed. Useful to continue the sequence of
             generated experiences.
 
+        Warnings
+        --------
+        * `State` and `State_norm` dtypes must be different or initial state
+          normalization will not be applied.
+
         See Also
         --------
         environment.py
@@ -367,12 +372,12 @@ class DRL_agent(agent):
                 "More than one initial action provided, please select just one."
             )
 
-        # initialize first considered state for rand option.
-        while initial_state in ["rand", environment.terminal_state]:
-            initial_state = environment.random_state_label_choice()
-
-        # set state label as initial state
-        state_label = initial_state
+        # set state as initial state
+        state_label = (
+            initial_state
+            if isinstance(initial_state, State_norm)
+            else environment._normalize_state_values(initial_state)
+        )
         # set action as initial action
         action = initial_action
 
