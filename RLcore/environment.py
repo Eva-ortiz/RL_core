@@ -180,9 +180,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                 self.init_env, self.init_state = None, None
             # input start env
             else:
-                assert set(start_env.index).issubset(
-                    set(self.env_cols)
-                ), f"`start_env` must have {self.env_cols} environment fields."
+                if not set(start_env.index).issubset(set(self.env_cols)):
+                    raise ValueError(
+                        f"`start_env` must contain {self.env_cols} environment fields."
+                    )
                 # define the initial environment
                 self.init_env = start_env
                 # and the initial state
