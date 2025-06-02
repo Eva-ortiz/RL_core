@@ -53,9 +53,12 @@ class ReplayMemory:
             self.memory.append(experience)
             self.visited_states.add(experience.state)
 
-    def sample(self, batch_size):
-        """Sample `batch_size` stored experiences."""
-        return random.sample(self.memory, batch_size)
+    def sample(self, batch_size, random_rng):
+        """Sample `batch_size` stored experiences.
+
+        Use provided random rng for it.
+        """
+        return random_rng.sample(self.memory, batch_size)
 
     def __len__(self):
         """Memory len."""
@@ -1718,7 +1721,7 @@ class DQN_agent(DRL_agent):
                 # Step 1.1: retrieve desired number of experiences and store them
                 # as a batch [1]
                 # ----------------------------------------------------------------------
-                batch = replay_memory.sample(batch_size)
+                batch = replay_memory.sample(batch_size, self.random_rng)
 
                 # ----------------------------------------------------------------------
                 # Step 1.2: use the batch experiences to get several pairs
