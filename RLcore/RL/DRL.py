@@ -15,7 +15,7 @@ from environment import ENV, Action, Reward, Setup_mode, State, State_norm
 from plots import learning_curve
 from utils import HTC_units_label
 
-from RLcore.utils import InputError, str_to_tuple_or_list
+from RLcore.utils import str_to_tuple_or_list
 
 transition = namedtuple(
     "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
@@ -378,12 +378,12 @@ class DRL_agent(agent):
         """
         # if input initial state is a terminal state, require a new input
         if environment._termination(initial_state):
-            raise InputError("Initial state provided is a terminal state.")
+            raise ValueError("Initial state provided is a terminal state.")
 
         # if input initial action has more than one element, require the user to
         # select just one
         if initial_action is not None and len(initial_action) > 1:
-            raise InputError(
+            raise ValueError(
                 "More than one initial action provided, please select just one."
             )
 
@@ -553,7 +553,7 @@ class DRL_agent(agent):
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
         if len(self.actions) != q_values.shape[0]:
-            raise InputError(
+            raise ValueError(
                 "Outputs of the `q_net` should correspond to the actions "
                 "stored in `self.actions`, even respecting the order."
             )
@@ -564,7 +564,7 @@ class DRL_agent(agent):
             try:
                 epsilon = kwargs["epsilon"]
             except KeyError as err:
-                raise InputError(
+                raise ValueError(
                     "Epsilon of epsilon greedy policy not provided."
                 ) from err
 
@@ -618,11 +618,11 @@ class DRL_agent(agent):
     ):
         """Check of `.train` inputs."""
         if epsilon > 1 or epsilon < 0:
-            raise InputError("Epsilon must be a number between 0 and 1.")
+            raise ValueError("Epsilon must be a number between 0 and 1.")
         if lr > 1 or lr < 0:
-            raise InputError("Learnig rate must be a number between 0 and 1.")
+            raise ValueError("Learnig rate must be a number between 0 and 1.")
         if discount_rate > 1 or discount_rate < 0:
-            raise InputError("Discount rate must be a number between 0 and 1.")
+            raise ValueError("Discount rate must be a number between 0 and 1.")
         if plot_learning_curves and reward_curve_steps_per_point is None:
             warnings.warn(
                 """In order to plot reward curves,
@@ -635,7 +635,7 @@ class DRL_agent(agent):
             "best_reward",
             "best_htc",
         }:
-            raise InputError(
+            raise ValueError(
                 """Invalid reward curve mode. Please, select 'return',
                 'last_reward', 'best_reward' or 'best_htc'."""
             )
@@ -1174,8 +1174,8 @@ class DRL_agent(agent):
 
         Raises
         ------
-        InputError
-            In `next_state` stored in input `experience` already is in
+        ValueError
+            If `next_state` stored in input `experience` already is in
             `known_states_list`.
 
         Warnings
@@ -1187,7 +1187,7 @@ class DRL_agent(agent):
           problem is only defined based on the HTC of the next state.
         """
         if experience.next_state in known_states_list:
-            raise InputError("Input next state already known.")
+            raise ValueError("Input next state already known.")
 
         known_states_list.append(experience.next_state)
 
@@ -1287,13 +1287,13 @@ class DRL_agent(agent):
             )
 
         if "best_reward" in reward_curve_mode and training_best_reward is None:
-            raise InputError(
+            raise ValueError(
                 """`training_best_reward` is required as input in order to
                 update best_reward learning curve."""
             )
 
         if "best_htc" in reward_curve_mode and training_best_htc is None:
-            raise InputError(
+            raise ValueError(
                 """`training_best_htc` is required as input in order to update
                 best_htc learning curve."""
             )
@@ -1420,7 +1420,7 @@ class DQN_agent(DRL_agent):
         """
         # check for some errors
         if algorithm not in ["Q-learning", "double_Q-learning"]:
-            raise InputError(
+            raise ValueError(
                 "Deep Q-learning agent can only be used for Q-learning algorithms."
                 f"Input algorithm was {algorithm}."
             )
@@ -1546,11 +1546,11 @@ class DQN_agent(DRL_agent):
 
         # basic checks of input values
         if epsilon > 1 or epsilon < 0:
-            raise InputError("Epsilon must be a number between 0 and 1.")
+            raise ValueError("Epsilon must be a number between 0 and 1.")
         if lr > 1 or lr < 0:
-            raise InputError("Learnig rate must be a number between 0 and 1.")
+            raise ValueError("Learnig rate must be a number between 0 and 1.")
         if discount_rate > 1 or discount_rate < 0:
-            raise InputError("Discount rate must be a number between 0 and 1.")
+            raise ValueError("Discount rate must be a number between 0 and 1.")
         if plot_learning_curves and reward_curve_steps_per_point is None:
             warnings.warn(
                 """In order to plot reward curves,
@@ -1563,12 +1563,12 @@ class DQN_agent(DRL_agent):
             "best_reward",
             "best_htc",
         }:
-            raise InputError(
+            raise ValueError(
                 """Invalid reward curve mode. Please, select 'return',
                 'last_reward', 'best_reward' or 'best_htc'."""
             )
         if target_estimation_mode not in ["regular", "target network", "double"]:
-            raise InputError(
+            raise ValueError(
                 """Invalid `target estimation mode`. Please, select 'regular',
                 'target network' or 'double'."""
             )
