@@ -11,7 +11,7 @@ from utils import load_conf
 
 
 class environment(ABC):
-    """Basic environment class."""
+    """OUTDATED. Basic environment class."""
 
     def __init__(
         self, cfg_path: Path = Path("./RLcore/config.toml"), seed: int | None = None
