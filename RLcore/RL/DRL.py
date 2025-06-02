@@ -568,7 +568,7 @@ class DRL_agent(agent):
                     "Epsilon of epsilon greedy policy not provided."
                 ) from err
 
-            rand = random.uniform(0, 1)
+            rand = self.random_rng.uniform(0, 1)
 
         # greedy behaviour
         elif mode == "greedy":
@@ -579,7 +579,7 @@ class DRL_agent(agent):
 
         # select the action depending on a random number and epsilon value
         if epsilon > rand:
-            action_idx = random.randint(0, len(self.actions) - 1)
+            action_idx = self.random_rng.randint(0, len(self.actions) - 1)
 
         # select the action with a greedy policy
         else:
@@ -594,7 +594,7 @@ class DRL_agent(agent):
             # select randomly the action between actions which presents the
             # maximum value (so if there is a tie, `torch.max` do not take
             # always the first action) [2]
-            action_idx = random.choice(max_action_idxs)
+            action_idx = self.random_rng.choice(max_action_idxs)
 
         # get action value and label with selected index
         action_val = q_values[action_idx]
