@@ -363,6 +363,9 @@ class DRL_agent(agent):
             Where kwargs such as `reset_options` will be applied as input. Its
             methods are also crucial for the correct functioning of this
             experience generation.
+        MaskablePPO.collect_rollouts
+            TODO : Method from `MaskablePPO` algorithm, reference to use
+            vectorized environments.
 
         Notes
         -----
@@ -397,6 +400,9 @@ class DRL_agent(agent):
         experiences = []
         visited_states = set()
         reached_states = set()
+
+        # TODO : obtain actions with vectorized environments, for ref see
+        # MaskablePPO.collect_rollouts
         for _ in range(n_experiences):
             # if decorrelated selected, randomly select next state and set the
             # environment to this state
