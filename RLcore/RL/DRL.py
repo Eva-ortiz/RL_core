@@ -1,6 +1,5 @@
 import copy
 import logging
-import random
 import warnings
 from collections import deque, namedtuple
 from typing import Any, Literal
@@ -764,10 +763,8 @@ class DRL_agent(agent):
         .. [3] https://stackoverflow.com/questions/48324152/how-to-change-the-learning-rate-of-an-optimizer-at-any-given-moment-no-lr-sched
         """
         # fix seed
-        seed = kwargs.get("seed")
-        if seed is not None:
-            random.seed(seed)
-            torch.manual_seed(seed)
+        if self.seed is not None:
+            torch.manual_seed(self.seed)
 
         # info
         logging.info(f"Training the agent with {self.algorithm} algorithm...")
@@ -1515,10 +1512,8 @@ class DQN_agent(DRL_agent):
         .. [4] https://iamholumeedey007.medium.com/copy-deepcopy-vs-clone-in-pytorch-e5b951b0cea3
         """
         # fix seed
-        seed = kwargs.get("seed")
-        if seed is not None:
-            random.seed(seed)
-            torch.manual_seed(seed)
+        if self.seed is not None:
+            torch.manual_seed(self.seed)
 
         # info
         logging.info(f"Training the agent with {self.algorithm} algorithm...")
