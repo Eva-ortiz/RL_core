@@ -729,6 +729,7 @@ class DRL_agent(agent):
 
         Notes
         -----
+        * Method designed for 1D observation spaces.
         * Currently, one pair action-state is being updated for each individual
           sample of the batch.
         * Notice that `max_steps` is not related to the number of steps per
@@ -1127,7 +1128,6 @@ class DRL_agent(agent):
                 updated.""",
                 stacklevel=1,
             )
-
         if "best_reward" in reward_curve_mode and training_best_reward is None:
             raise ValueError(
                 """`training_best_reward` is required as input in order to
