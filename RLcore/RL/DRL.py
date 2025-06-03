@@ -536,9 +536,11 @@ class DRL_agent(agent):
         # Obtain the action-state values for all actions from input `state`
         # Additionally, execute the forward pass at the same device we are using for
         # training to avoid a Pytorch `RuntimeError`
-        # OUTDATED : It is necessary to set input as float32 so Pythorch does
-        # not return us a `RuntimeError` due dtypes
-        q_values = q_net.forward(torch.from_numpy(state_norm).to(device))
+        # It is necessary to set input as float32 so Pythorch does not return us
+        # a `RuntimeError` due dtypes
+        q_values = q_net.forward(
+            torch.from_numpy(state_norm.astype(np.float32)).to(device)
+        )
 
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
@@ -882,12 +884,14 @@ class DRL_agent(agent):
             batch_targets = []
             for experience in batch:
                 # obtain ALL the q value estimations of the net for state.
-                # OUTDATED: It is necessary to set input as float32 so Pythorch
-                # does not return us a `RuntimeError` due dtypes.
+                # It is necessary to set input as float32 so Pytorch does not
+                # return us a `RuntimeError` due dtypes.
                 # Additionally, execute the forward pass at the same device we
                 # are using for training to avoid a Pytorch `RuntimeError`.
                 estimated_q_values = q_net.forward(
-                    torch.from_numpy(experience.state_norm).to(device)
+                    torch.from_numpy(experience.state_norm.astype(np.float32)).to(
+                        device
+                    )
                 )
                 batch_estimations.append(estimated_q_values[experience.action_idx])
 
@@ -1476,12 +1480,14 @@ class DQN_agent(DRL_agent):
                     visited_states_norm.add(experience.state_norm)
 
                     # Obtain ALL the q value estimations of the net for state.
-                    # OUTDATED: It is necessary to set input as float32 so
-                    # Pythorch does not return us a `RuntimeError` due dtypes.
+                    # It is necessary to set input as float32 so Pytorch does
+                    # not return us a `RuntimeError` due dtypes.
                     # Additionally, execute the forward pass at the same device we
                     # are using for training to avoid a Pytorch `RuntimeError`.
                     estimated_q_values = q_net.forward(
-                        torch.from_numpy(experience.state_norm).to(device)
+                        torch.from_numpy(experience.state_norm.astype(np.float32)).to(
+                            device
+                        )
                     )
                     batch_estimations.append(estimated_q_values[experience.action_idx])
 
