@@ -887,16 +887,13 @@ class DRL_agent(agent):
             batch_estimations = []
             batch_targets = []
             for experience in batch:
-                # Transform state form label to list[int]
-                state_list = str_to_tuple_or_list(experience.state, to="list")
-
-                # obtain ALL the q value estimations of the net for state
-                # It is necessary to set input as float32 so Pythorch does not
-                # return us a `RuntimeError` due dtypes
+                # obtain ALL the q value estimations of the net for state.
+                # OUTDATED: It is necessary to set input as float32 so Pythorch
+                # does not return us a `RuntimeError` due dtypes.
                 # Additionally, execute the forward pass at the same device we
-                # are using for training to avoid a Pytorch `RuntimeError`
+                # are using for training to avoid a Pytorch `RuntimeError`.
                 estimated_q_values = q_net.forward(
-                    torch.from_numpy(np.array(state_list, dtype=np.float32)).to(device)
+                    torch.from_numpy(experience.state_norm).to(device)
                 )
                 batch_estimations.append(estimated_q_values[experience.action_idx])
 
@@ -908,25 +905,18 @@ class DRL_agent(agent):
                         # retrieve from experience the next action taken with
                         # behaviour policy and compute its q_value
                         # 1- obtain the action-state values for all actions from
-                        # `next_state`
-                        next_state_list = str_to_tuple_or_list(
-                            experience.next_state, to="list"
-                        )
+                        # `next_state_norm`
                         next_q_values = q_net.forward(
-                            torch.from_numpy(
-                                np.array(next_state_list, dtype=np.float32)
-                            ).to(device)
+                            torch.from_numpy(experience.next_state_norm).to(device)
                         )
                         # 2- get action value with selected next_action index
-                        next_q_value = next_q_values[
-                            list(experience.next_action.values())[0]
-                        ]
+                        next_q_value = next_q_values[experience.next_action_idx]
 
                     elif self.algorithm == "Q-learning":
                         # greedy action as target behaviour for Q-learning
                         _, next_q_value, _ = self._act(
                             "greedy",
-                            experience.next_state,
+                            experience.next_state_norm,
                             q_net=q_net,
                             device=device,
                         )
