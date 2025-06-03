@@ -410,7 +410,7 @@ class DRL_agent(agent):
                 )
 
             # store visited states
-            visited_states_norm.add(state_norm)
+            visited_states_norm.add(tuple(state_norm))  # solve not hashable
 
             # if action has not been provided as input, choose action with
             # behaviour policy
