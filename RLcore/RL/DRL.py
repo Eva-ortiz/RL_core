@@ -1335,18 +1335,10 @@ class DQN_agent(DRL_agent):
             "reward_curve_mode", ["return", "last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
-        episode_start_state = kwargs.get("episode_start_state", "initial")
-
-        decorrelated = kwargs.get("decorrelated", False)
-        step_count = kwargs.get("step_count", False)
-
         debug_counter = kwargs.get("debug_counter", 1)
 
-        # define episode start with reset method
-        episode_start_state = environment.reset(episode_start_state)
-
-        # initialize batch state
-        initial_batch_state = episode_start_state
+        decorrelated = kwargs.get("decorrelated", False)
+        reset_options = kwargs.get("reset_options", False)
 
         # basic checks of input values
         if epsilon > 1 or epsilon < 0:
@@ -1371,6 +1363,14 @@ class DQN_agent(DRL_agent):
                 """Invalid `target estimation mode`. Please, select 'regular',
                 'target network' or 'double'."""
             )
+
+        # obtain episode start with reset method
+        env_norm_start_state, _ = environment.reset(
+            seed=self.seed, options=reset_options
+        )
+
+        # initialize batch state
+        initial_batch_state = env_norm_start_state
 
         # -------------------------------------------------------------------------
         # Step 0: define the NN of the Q function
@@ -1426,7 +1426,7 @@ class DQN_agent(DRL_agent):
             initial_state=initial_batch_state,
             follow_next_action=False,
             decorrelated=decorrelated,
-            step_count=step_count,
+            reset_options=reset_options,
         )
         visited_states_norm = set()
         training_best_reward = -np.inf
@@ -1467,7 +1467,7 @@ class DQN_agent(DRL_agent):
                 initial_state=replay_memory.memory[-1].next_state,
                 follow_next_action=False,
                 decorrelated=decorrelated,
-                step_count=step_count,
+                reset_options=reset_options,
             )
 
             # store the transition
@@ -1586,25 +1586,19 @@ class DQN_agent(DRL_agent):
             # make a small simulation to get the rewards of the net for an
             # episode
             if reward_curve_steps_per_point is not None:
-                overall_return, last_reward, _, _, _ = self.greedy_simulation(
-                    q_net=q_net,
-                    environment=copy.deepcopy(environment),
-                    start_state=episode_start_state,
-                    steps=reward_curve_steps_per_point,
-                    device=device,
+                self._update_reward_curves(
+                    environment,
+                    q_net,
+                    step,
+                    device,
+                    reward_curves,
+                    reward_curve_mode,
+                    reward_curve_steps_per_point,
+                    lr,
+                    epsilon,
+                    training_best_reward,
+                    reset_options,
                 )
-                for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                    if reward_curve_mode_ == "return":
-                        step_reward = overall_return
-                    elif reward_curve_mode_ == "last_reward":
-                        step_reward = last_reward
-                    elif reward_curve_mode_ == "best_reward":
-                        step_reward = training_best_reward
-
-                    # update learning curves
-                    reward_curves[idx].update(
-                        step_reward, step, learning_rate=lr, epsilon=epsilon
-                    )
 
             # reduction of epsilon at each episode, with a min value of min_eps
             epsilon -= reduce_eps
