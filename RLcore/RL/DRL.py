@@ -199,7 +199,7 @@ class DRL_agent(agent):
             Network for the prediction of all action-state values for a given
             state.
         environment : ENV
-            Environment object of the problem.
+            Environment object of the problem, reset to perform the simulation.
         max_steps : int
             Maximum number of steps of the simulation. If `end_episode` reached,
             previously stop the simulation.
@@ -704,12 +704,6 @@ class DRL_agent(agent):
                 If None, DO NOT RECORD any reward learning curve.
                 By default, 30.
 
-            episode_start_state : [Literal["rand", "initial"], str], optional
-                State to initialize the episodes from.
-                If "rand", create a random initial state each time.
-                If "initial", start from environment start state.
-                By default, "initial".
-
             decorrelated : bool, optional
                 Select if batch samples are decorrelated. If True, they will be
                 decorrelated. By default, False.
@@ -723,9 +717,9 @@ class DRL_agent(agent):
                 Select every how many counts logging debug will be given.
                 By default, 1.
 
-            seed : int, optional
-                Seed number for random and torch modules. If None, do not fix
-                any seed. By default, None.
+            reset_options : dict, optional
+                Additional information to specify how the environment is reset
+                (depending on the specific environment). By default, None.
 
         Warns
         -----
@@ -768,13 +762,10 @@ class DRL_agent(agent):
             "reward_curve_mode", ["return", "last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
-
-        episode_start_state = kwargs.get("episode_start_state", "initial")
+        debug_counter = kwargs.get("debug_counter", 1)
 
         decorrelated = kwargs.get("decorrelated", False)
-        step_count = kwargs.get("step_count", False)
-
-        debug_counter = kwargs.get("debug_counter", 1)
+        reset_options = kwargs.get("reset_options")
 
         # basic checks of input values
         self._check_train_inputs(
@@ -841,11 +832,13 @@ class DRL_agent(agent):
         # store visited states
         visited_states_norm = set()
 
-        # define episode start with reset method
-        episode_start_state = environment.reset(episode_start_state)
+        # obtain episode start with reset method
+        env_norm_start_state, _ = environment.reset(
+            seed=self.seed, options=reset_options
+        )
 
         # initialize batch state
-        initial_batch_state = episode_start_state
+        initial_batch_state_norm = env_norm_start_state
 
         # select to store a' only for Sarsa algorithm
         follow_next_action = self.algorithm == "Sarsa"
@@ -866,7 +859,7 @@ class DRL_agent(agent):
                 batch,
                 batch_visited_states_norm,
                 _,
-                last_batch_state,
+                last_batch_state_norm,
                 last_batch_action,
             ) = self._experience_generation(
                 batch_size,
@@ -874,13 +867,13 @@ class DRL_agent(agent):
                 environment,
                 device,
                 epsilon,
-                initial_batch_state,
+                initial_batch_state_norm,
                 initial_batch_action,
                 follow_next_action,
                 decorrelated,
-                step_count=step_count,
+                reset_options=reset_options,
             )
-            initial_batch_state = last_batch_state
+            initial_batch_state_norm = last_batch_state_norm
             initial_batch_action = last_batch_action
 
             # store unique visited states with the usage of set
@@ -969,7 +962,6 @@ class DRL_agent(agent):
                 self._update_reward_curves(
                     environment,
                     q_net,
-                    episode_start_state,
                     step,
                     device,
                     reward_curves,
@@ -978,6 +970,7 @@ class DRL_agent(agent):
                     lr,
                     epsilon,
                     training_best_reward,
+                    reset_options,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
@@ -1081,7 +1074,6 @@ class DRL_agent(agent):
         self,
         environment: gym.Env,
         q_net: QNN,
-        episode_start_state: str,
         step: int,
         device: Literal["cuda", "mps", "cpu"],
         reward_curves: list[learning_curve],
@@ -1090,6 +1082,7 @@ class DRL_agent(agent):
         lr: float | None = None,
         epsilon: float | None = None,
         training_best_reward: float | None = None,
+        reset_options: dict[str, Any] | None = None,
     ):
         """Update selected reward curves in `reward_curve_mode` for each step.
 
@@ -1099,12 +1092,10 @@ class DRL_agent(agent):
         Parameters
         ----------
         environment: environment
-            Environment of the simulation, deep copied to perform the greedy
-            simulation.
+            Initialized environment of the simulation, deep copied inside of
+            this function to perform the greedy simulation.
         q_net: QNN
             Q-network with which make the simulation.
-        episode_start_state: str
-            Start state of an episode. Used as starting point of the simulation.
         step: int
             Step of the training, x-axis of reward curves.
         device: Literal["cuda", "mps", "cpu"]
@@ -1125,6 +1116,9 @@ class DRL_agent(agent):
         training_best_reward: Optional[float], optional
             Training best reward for input step. Necessary in order to update
             best_reward learning curve.
+        reset_options : dict[str, Any] | None, optional
+            Additional information to specify how the environment is reset. By
+            default, None.
 
         Warnings
         --------
@@ -1154,9 +1148,9 @@ class DRL_agent(agent):
         overall_return, last_reward, _, _, _ = self.greedy_simulation(
             q_net=q_net,
             environment=copy.deepcopy(environment),  # [1]
-            start_state=episode_start_state,
-            steps=steps_per_point,
+            max_steps=steps_per_point,
             device=device,
+            reset_options=reset_options,
         )
         for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
             if reward_curve_mode_ == "return":
