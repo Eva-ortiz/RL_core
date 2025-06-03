@@ -1367,13 +1367,12 @@ class DQN_agent(DRL_agent):
         # Step 0: define the NN of the Q function
         # -------------------------------------------------------------------------
         # Input dim is the number of aspects that define our state.
-        # Take into account that, in our implementation, the state will be given
-        # by a str with a collection of numbers.
-        in_dim = len(str_to_tuple_or_list(environment.start_state, to="list"))
+        # DISCLAIMER : intended for 1D observation spaces
+        in_dim = environment.observation_space.shape[0]
 
         # Output dim will be given by the number of possible actions for each
         # state, i. e., number of possible actions.
-        out_dim = len(self.actions)
+        out_dim = environment.action_space.shape[0]
 
         # create the neural network
         q_net = QNN(
