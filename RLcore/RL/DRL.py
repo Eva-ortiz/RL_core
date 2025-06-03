@@ -1265,8 +1265,7 @@ class DQN_agent(DRL_agent):
         Parameters
         ----------
         memory_size : int, optional
-            Maximum length of memory replay.
-            By default, 10000 [2]
+            Maximum length of memory replay. By default, 10000 [2]
         n_batch_per_step : int, optional
             Number of batches to retrieve from memory for each training step.
             By default, 4 [2]
@@ -1295,6 +1294,7 @@ class DQN_agent(DRL_agent):
 
         Notes
         -----
+        * Method designed for 1D observation spaces.
         * Currently, one pair action-state is being updated for each individual
           sample of the batch.
         * Notice that `max_steps` is not related to the number of steps per
