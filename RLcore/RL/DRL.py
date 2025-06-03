@@ -375,10 +375,6 @@ class DRL_agent(agent):
         * We will skip transitions that starts at the terminal state, defined by
           the environment (see `environment._setup`).
         """
-        # if input initial state is a terminal state, require a new input
-        if environment._termination(initial_state):
-            raise ValueError("Initial state provided is a terminal state.")
-
         # if input initial action has more than one element, require the user to
         # select just one
         if initial_action is not None and len(initial_action) > 1:
