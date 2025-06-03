@@ -375,11 +375,10 @@ class DRL_agent(agent):
         * We will skip transitions that starts at the terminal state, defined by
           the environment (see `environment._setup`).
         """
-        # if input initial action has more than one element, require the user to
-        # select just one
-        if initial_action is not None and len(initial_action) > 1:
+        # check input initial action
+        if initial_action is not None and not isinstance(initial_action, Action):
             raise ValueError(
-                "More than one initial action provided, please select just one."
+                f"Just one initial action must be provided with dtype {Action}."
             )
 
         # obtain normalized state from initial state
