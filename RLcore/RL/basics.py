@@ -135,8 +135,7 @@ class agent(ABC):
         """
         self.verbose = verbose
         self.seed = seed
-        if seed is not None:
-            self.random_rng = random.Random(seed)
+        self.random_rng = random.Random(seed)
 
         self.algorithm = algorithm
         self.actions = actions
