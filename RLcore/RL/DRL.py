@@ -626,15 +626,10 @@ class DRL_agent(agent):
                 `reward_curve_steps_per_point` must be other than None.""",
                 stacklevel=1,
             )
-        if not set(reward_curve_mode) <= {
-            "return",
-            "last_reward",
-            "best_reward",
-            "best_htc",
-        }:
+        if not set(reward_curve_mode) <= {"return", "last_reward", "best_reward"}:
             raise ValueError(
                 """Invalid reward curve mode. Please, select 'return',
-                'last_reward', 'best_reward' or 'best_htc'."""
+                'last_reward' or 'best_reward'."""
             )
 
     def train(
@@ -702,9 +697,7 @@ class DRL_agent(agent):
                         simulation.
                     * best_reward : plot the best reward seen during all the
                       training.
-                    * best_htc : plot the best htc value (higher htc value) seen
-                      during all the training.
-                By default, ["return", "last_reward", "best_reward", "best_htc"]
+                By default, ["return", "last_reward", "best_reward"]
             reward_curve_steps_per_point : Optional[int], optional
                 Select the number of steps for each one of the simulated
                 episodes created to plot each point of the reward curve.
@@ -772,7 +765,7 @@ class DRL_agent(agent):
         min_lr = kwargs.get("min_lr", 0.0)
 
         reward_curve_mode = kwargs.get(
-            "reward_curve_mode", ["return", "last_reward", "best_reward", "best_htc"]
+            "reward_curve_mode", ["return", "last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
 
@@ -829,7 +822,6 @@ class DRL_agent(agent):
         step = 1
         loss = np.inf
         training_best_reward = -np.inf
-        training_best_htc = -np.inf
 
         # initialize learning curves
         loss_curve = learning_curve()
@@ -988,7 +980,6 @@ class DRL_agent(agent):
                     lr,
                     epsilon,
                     training_best_reward,
-                    training_best_htc,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
@@ -1027,8 +1018,6 @@ class DRL_agent(agent):
                     self.reward_curve_last_reward = reward_curves[idx]
                 elif reward_curve_mode_ == "best_reward":
                     self.reward_curve_best_reward = reward_curves[idx]
-                elif reward_curve_mode_ == "best_htc":
-                    self.reward_curve_best_htc = reward_curves[idx]
 
         if save_q_net:  # [1]
             torch.save(
@@ -1106,7 +1095,6 @@ class DRL_agent(agent):
         lr: float | None = None,
         epsilon: float | None = None,
         training_best_reward: float | None = None,
-        training_best_htc: float | None = None,
     ):
         """Update selected reward curves in `reward_curve_mode` for each step.
 
@@ -1142,9 +1130,6 @@ class DRL_agent(agent):
         training_best_reward: Optional[float], optional
             Training best reward for input step. Necessary in order to update
             best_reward learning curve.
-        training_best_htc: Optional[float], optional
-            Training best htc for input step. Necessary in order to update
-            best_htc learning curve.
 
         Warnings
         --------
@@ -1170,12 +1155,6 @@ class DRL_agent(agent):
                 update best_reward learning curve."""
             )
 
-        if "best_htc" in reward_curve_mode and training_best_htc is None:
-            raise ValueError(
-                """`training_best_htc` is required as input in order to update
-                best_htc learning curve."""
-            )
-
         # make a small simulation to get the rewards of the net for an episode
         overall_return, last_reward, _, _, _ = self.greedy_simulation(
             q_net=q_net,
@@ -1191,8 +1170,6 @@ class DRL_agent(agent):
                 step_reward = last_reward
             elif reward_curve_mode_ == "best_reward":
                 step_reward = training_best_reward
-            elif reward_curve_mode_ == "best_htc":
-                step_reward = training_best_htc
             # update learning curves
             reward_curves[idx].update(step_reward, step, lr, epsilon)
 
@@ -1251,9 +1228,6 @@ class DRL_agent(agent):
                 elif reward_curve_mode_ == "best_reward":
                     reward_ylabel = f"Maximum reward ({units_label})"
                     suffix = "best_reward"
-                elif reward_curve_mode_ == "best_htc":
-                    reward_ylabel = f"Maximum heat transfer coefficient ({units_label})"
-                    suffix = "best_htc"
 
                 reward_curves[idx].plot(
                     title="",
@@ -1261,11 +1235,7 @@ class DRL_agent(agent):
                     ylabel=reward_ylabel,
                     plot_epsilon=True,
                     plot_lr=False,
-                    y_divisor=(
-                        reward_reduction_factor
-                        if reward_curve_mode_ == "best_htc"
-                        else None
-                    ),
+                    y_divisor=None,
                     save_path=f"./img/{self.save_folder}/Reward_learning_curve_{n_layers}_{suffix}.png",
                 )
 
@@ -1404,7 +1374,7 @@ class DQN_agent(DRL_agent):
         min_lr = kwargs.get("min_lr", 0.0)
 
         reward_curve_mode = kwargs.get(
-            "reward_curve_mode", ["return", "last_reward", "best_reward", "best_htc"]
+            "reward_curve_mode", ["return", "last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
         episode_start_state = kwargs.get("episode_start_state", "initial")
@@ -1433,15 +1403,10 @@ class DQN_agent(DRL_agent):
                 `reward_curve_steps_per_point` must be other than None.""",
                 stacklevel=1,
             )
-        if not set(reward_curve_mode) <= {
-            "return",
-            "last_reward",
-            "best_reward",
-            "best_htc",
-        }:
+        if not set(reward_curve_mode) <= {"return", "last_reward", "best_reward"}:
             raise ValueError(
                 """Invalid reward curve mode. Please, select 'return',
-                'last_reward', 'best_reward' or 'best_htc'."""
+                'last_reward' or 'best_reward'."""
             )
         if target_estimation_mode not in ["regular", "target network", "double"]:
             raise ValueError(
@@ -1508,8 +1473,6 @@ class DQN_agent(DRL_agent):
         visited_states = set()
         training_best_reward = -np.inf
         known_states_list = []
-        # initialize best htc value
-        training_best_htc = -np.inf
 
         # initialize learning curves
         loss_curve = learning_curve()
@@ -1631,18 +1594,14 @@ class DQN_agent(DRL_agent):
 
                         batch_targets.append(target_q_value)
 
-                    # store the best htc, reward and state label found during
-                    # TRAINING
-                    experience_htc = environment.htc_values[experience.next_state]
-                    if experience_htc > training_best_htc:
-                        training_best_htc = experience_htc
-                        training_best_reward = experience.reward
-                        logging.debug(
-                            f"""Better state used for training at step {step}
-                             and visited state number {len(visited_states)}:
-                             {experience.next_state} ({experience_htc})"""
-                        )
-
+                # store the best reward found during TRAINING
+                if experience.reward > training_best_reward:
+                    training_best_reward = experience.reward
+                    logging.debug(
+                        f"""Better training reward at step {step} and visited
+                            state number {len(visited_states)}:
+                            {experience.reward}"""
+                    )
                 # get the loss of the action value to update in the q net
                 # detach indicates to not follow the gradient for the target, as it
                 # implies the use of the q net too
@@ -1685,8 +1644,6 @@ class DQN_agent(DRL_agent):
                         step_reward = last_reward
                     elif reward_curve_mode_ == "best_reward":
                         step_reward = training_best_reward
-                    elif reward_curve_mode_ == "best_htc":
-                        step_reward = training_best_htc
 
                     # update learning curves
                     reward_curves[idx].update(
@@ -1729,8 +1686,6 @@ class DQN_agent(DRL_agent):
                     self.reward_curve_last_reward = reward_curves[idx]
                 elif reward_curve_mode_ == "best_reward":
                     self.reward_curve_best_reward = reward_curves[idx]
-                elif reward_curve_mode_ == "best_htc":
-                    self.reward_curve_best_htc = reward_curves[idx]
 
         if save_q_net:  # [1]
             torch.save(
@@ -1776,11 +1731,6 @@ class DQN_agent(DRL_agent):
                     elif reward_curve_mode_ == "best_reward":
                         reward_ylabel = f"Maximum reward ({units_label})"
                         suffix = "best_reward"
-                    elif reward_curve_mode_ == "best_htc":
-                        reward_ylabel = (
-                            f"Maximum heat transfer coefficient ({units_label})"
-                        )
-                        suffix = "best_htc"
 
                     reward_curves[idx].plot(
                         title="",
@@ -1788,10 +1738,6 @@ class DQN_agent(DRL_agent):
                         ylabel=reward_ylabel,
                         plot_epsilon=True,
                         plot_lr=False,
-                        y_divisor=(
-                            environment.reward_reduction_factor
-                            if reward_curve_mode_ == "best_htc"
-                            else None
-                        ),
+                        y_divisor=None,
                         save_path=f"./img/{self.save_folder}/Reward_learning_curve_{environment.n_layers}_{suffix}.png",
                     )
