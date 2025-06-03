@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import axes, figure
-from utils import InputError
 
 from RLcore.global_vars import PLOT_FONT
 
@@ -43,7 +42,7 @@ def save_fig_df(
     """
     # check df or x/y are given, not both
     if x is not None and y is not None and df is not None:
-        raise InputError("Only `df` or `x` and `y` must be provided.")
+        raise ValueError("Only `df` or `x` and `y` must be provided.")
 
     if x is not None and y is not None:
         # save figure data
@@ -52,7 +51,7 @@ def save_fig_df(
     elif df is not None:
         df_fig = df
     else:
-        raise InputError(
+        raise ValueError(
             "Not enough input data. Either `df` or `x` and `y` must be provided."
         )
 
