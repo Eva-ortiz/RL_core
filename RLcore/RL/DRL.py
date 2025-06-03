@@ -838,7 +838,6 @@ class DRL_agent(agent):
                 stacklevel=1,
             )
         known_states_list = []
-        max_htc_vs_known_state = learning_curve()
 
         # store visited states
         visited_states = set()
@@ -1009,7 +1008,6 @@ class DRL_agent(agent):
         self.known_states_list = known_states_list
 
         self.loss_curve = loss_curve
-        self.max_htc_vs_known_state = max_htc_vs_known_state
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "return":
@@ -1032,7 +1030,6 @@ class DRL_agent(agent):
             self._plot_learning_curves(
                 environment.n_layers,
                 loss_curve,
-                max_htc_vs_known_state,
                 reward_curves,
                 reward_curve_mode,
                 reward_reduction_factor=environment.reward_reduction_factor,
@@ -1177,7 +1174,6 @@ class DRL_agent(agent):
         self,
         n_layers: int,
         loss_curve: learning_curve,
-        max_htc_vs_known_state: learning_curve,
         reward_curves: list[learning_curve],
         reward_curve_mode: list[str],
         reward_reduction_factor: str | None = None,
@@ -1206,15 +1202,6 @@ class DRL_agent(agent):
             plot_epsilon=True,
             plot_lr=False,
             save_path=f"./img/{self.save_folder}/Loss_learning_curve_{n_layers}.png",
-        )
-
-        max_htc_vs_known_state.plot(
-            title="",
-            xlabel="Found states",
-            ylabel=r"Largest HTC ($\mathdefault{W/m^2K}$)",
-            plot_epsilon=False,
-            plot_lr=False,
-            save_path=f"./img/{self.save_folder}/Max_htc_per_known_state_{n_layers}.png",
         )
 
         if len(reward_curves) != 0:
@@ -1488,7 +1475,6 @@ class DQN_agent(DRL_agent):
                 `reward_curve_steps_per_point` to None.""",
                 stacklevel=1,
             )
-        max_htc_vs_known_state = learning_curve()
 
         # ------ ALGORITHM ------
         # loop during a determined number of steps or until convergence
@@ -1677,7 +1663,6 @@ class DQN_agent(DRL_agent):
         self.known_states_list = known_states_list
 
         self.loss_curve = loss_curve
-        self.max_htc_vs_known_state = max_htc_vs_known_state
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "return":
@@ -1707,15 +1692,6 @@ class DQN_agent(DRL_agent):
                 plot_epsilon=True,
                 plot_lr=False,
                 save_path=f"./img/{self.save_folder}/Loss_learning_curve_{environment.n_layers}.png",
-            )
-
-            max_htc_vs_known_state.plot(
-                title="",
-                xlabel="Found states",
-                ylabel=r"Largest HTC ($\mathdefault{W/m^2K}$)",
-                plot_epsilon=False,
-                plot_lr=False,
-                save_path=f"./img/{self.save_folder}/Max_htc_per_known_state_{environment.n_layers}.png",
             )
 
             if reward_curve_steps_per_point is not None:

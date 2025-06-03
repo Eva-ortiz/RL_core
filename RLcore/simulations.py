@@ -255,10 +255,6 @@ def approximated_simulation(
             f"""Number of visited states:
              {len(agent.visited_states)}/{eval_env.shape[0]}"""
         )
-        logging.info(
-            f"""Number of reached states:
-             {len(agent.max_htc_vs_known_state.iterations)}/{eval_env.shape[0]}"""
-        )
 
     print("DEEP REINFORCEMENT LEARNING IS DONE!")
 
