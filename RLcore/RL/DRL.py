@@ -462,7 +462,7 @@ class DRL_agent(agent):
             state_norm, _ = (
                 environment.reset(options=kwargs.get("reset_options"))
                 if terminated or truncated
-                else next_state_norm
+                else (next_state_norm, _)
             )
 
             # If follow_next_action is selected, force reset action to None if
