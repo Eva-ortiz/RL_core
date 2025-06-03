@@ -37,7 +37,7 @@ class ReplayMemory:
     """
 
     def __init__(self, capacity, agent, **kwargs):
-        experiences, self.visited_states, self.reached_states, _, _ = (
+        experiences, self.visited_states_norm, self.reached_states, _, _ = (
             agent._experience_generation(**kwargs)
         )
         self.memory = deque(experiences, maxlen=capacity)
@@ -50,7 +50,7 @@ class ReplayMemory:
         """
         for experience in experiences:
             self.memory.append(experience)
-            self.visited_states.add(experience.state)
+            self.visited_states_norm.add(experience.state_norm)
 
     def sample(self, batch_size, random_rng):
         """Sample `batch_size` stored experiences.
@@ -339,7 +339,7 @@ class DRL_agent(agent):
             List which contains each one of the experiences, composed by
             (state_norm, action_idx, reward, next_state_norm).
             If follow_next_action, also include next_action_idx.
-        visited_states : tuple[State_norm]
+        visited_states_norm : tuple[State_norm]
             Tuple of visited states (normalized).
         reached_states : tuple[State_norm]
             Tuple of reached states (normalized), useful when the reward is
@@ -400,7 +400,7 @@ class DRL_agent(agent):
 
         # store generated experiences
         experiences = []
-        visited_states = set()
+        visited_states_norm = set()
         reached_states = set()
 
         # TODO : obtain actions with vectorized environments, for ref see
@@ -417,7 +417,7 @@ class DRL_agent(agent):
                 )
 
             # store visited states
-            visited_states.add(state_norm)
+            visited_states_norm.add(state_norm)
 
             # if action has not been provided as input, choose action with
             # behaviour policy
@@ -487,7 +487,7 @@ class DRL_agent(agent):
         # the final visited state and next action
         return (
             experiences,
-            visited_states,
+            visited_states_norm,
             reached_states,
             state_norm,
             action_idx,
@@ -837,10 +837,9 @@ class DRL_agent(agent):
                 `reward_curve_steps_per_point` to None.""",
                 stacklevel=1,
             )
-        known_states_list = []
 
         # store visited states
-        visited_states = set()
+        visited_states_norm = set()
 
         # define episode start with reset method
         episode_start_state = environment.reset(episode_start_state)
@@ -865,7 +864,7 @@ class DRL_agent(agent):
             # -------------------------------------------------------------------------
             (
                 batch,
-                batch_visited_states,
+                batch_visited_states_norm,
                 _,
                 last_batch_state,
                 last_batch_action,
@@ -885,8 +884,8 @@ class DRL_agent(agent):
             initial_batch_action = last_batch_action
 
             # store unique visited states with the usage of set
-            for state in batch_visited_states:
-                visited_states.add(state)
+            for state_norm in batch_visited_states_norm:
+                visited_states_norm.add(state_norm)
 
             # -------------------------------------------------------------------------
             # Step 1.2: use the batch experiences to get several pairs
@@ -1004,8 +1003,7 @@ class DRL_agent(agent):
         # Step 2: save relevant training products
         # -------------------------------------------------------------------------
         self.q_net = q_net
-        self.visited_states = visited_states
-        self.known_states_list = known_states_list
+        self.visited_states_norm = visited_states_norm
 
         self.loss_curve = loss_curve
         if reward_curve_steps_per_point is not None:
@@ -1439,7 +1437,7 @@ class DQN_agent(DRL_agent):
         # -------------------------------------------------------------------------
         # ------ INITIALIZATION ------
         # initialize step number, amount of loss, memory of experiences,
-        # visited_states storage, storage of best reward seen along all the
+        # visited_states_norm storage, storage of best reward seen along all the
         # training, storage of known states and storage of the higher htc
         # obtained in memory experiences
         step = 1
@@ -1457,9 +1455,8 @@ class DQN_agent(DRL_agent):
             decorrelated=decorrelated,
             step_count=step_count,
         )
-        visited_states = set()
+        visited_states_norm = set()
         training_best_reward = -np.inf
-        known_states_list = []
 
         # initialize learning curves
         loss_curve = learning_curve()
@@ -1519,7 +1516,7 @@ class DQN_agent(DRL_agent):
                 for experience in batch:
                     # store unique visited states during the network training
                     # with the usage of set
-                    visited_states.add(experience.state)
+                    visited_states_norm.add(experience.state_norm)
 
                     # Transform state form label to list[int]
                     state_list = str_to_tuple_or_list(experience.state, to="list")
@@ -1585,7 +1582,7 @@ class DQN_agent(DRL_agent):
                     training_best_reward = experience.reward
                     logging.debug(
                         f"""Better training reward at step {step} and visited
-                            state number {len(visited_states)}:
+                            state number {len(visited_states_norm)}:
                             {experience.reward}"""
                     )
                 # get the loss of the action value to update in the q net
@@ -1659,8 +1656,7 @@ class DQN_agent(DRL_agent):
         # Step 2: save relevant training products
         # -------------------------------------------------------------------------
         self.q_net = q_net
-        self.visited_states = visited_states
-        self.known_states_list = known_states_list
+        self.visited_states_norm = visited_states_norm
 
         self.loss_curve = loss_curve
         if reward_curve_steps_per_point is not None:
