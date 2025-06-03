@@ -1009,13 +1009,7 @@ class DRL_agent(agent):
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
         if plot_learning_curves:
-            self._plot_learning_curves(
-                environment.n_layers,
-                loss_curve,
-                reward_curves,
-                reward_curve_mode,
-                reward_reduction_factor=environment.reward_reduction_factor,
-            )
+            self._plot_learning_curves(loss_curve, reward_curves, reward_curve_mode)
 
     def load_net(
         self,
@@ -1154,11 +1148,9 @@ class DRL_agent(agent):
 
     def _plot_learning_curves(
         self,
-        n_layers: int,
         loss_curve: learning_curve,
         reward_curves: list[learning_curve],
         reward_curve_mode: list[str],
-        reward_reduction_factor: str | None = None,
     ):
         """Plot learning curves adapted to `DRL_agent` outputs.
 
@@ -1174,8 +1166,6 @@ class DRL_agent(agent):
                 f"reward curve modes. Only {reward_curve_mode} will be updated.",
                 stacklevel=1,
             )
-        # obtain units label
-        units_label = HTC_units_label(reward_reduction_factor)
 
         loss_curve.plot(
             title="",
@@ -1183,19 +1173,19 @@ class DRL_agent(agent):
             ylabel="MAE loss",
             plot_epsilon=True,
             plot_lr=False,
-            save_path=f"./img/{self.save_folder}/Loss_learning_curve_{n_layers}.png",
+            save_path=f"./img/{self.save_folder}/loss_learning_curve.png",
         )
 
         if len(reward_curves) != 0:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "return":
-                    reward_ylabel = f"Return ({units_label})"
+                    reward_ylabel = "Return"
                     suffix = "return"
                 elif reward_curve_mode_ == "last_reward":
-                    reward_ylabel = f"Last reward of greedy simulation ({units_label})"
+                    reward_ylabel = "Last reward of greedy simulation"
                     suffix = "last_reward"
                 elif reward_curve_mode_ == "best_reward":
-                    reward_ylabel = f"Maximum reward ({units_label})"
+                    reward_ylabel = "Maximum reward"
                     suffix = "best_reward"
 
                 reward_curves[idx].plot(
@@ -1205,7 +1195,7 @@ class DRL_agent(agent):
                     plot_epsilon=True,
                     plot_lr=False,
                     y_divisor=None,
-                    save_path=f"./img/{self.save_folder}/Reward_learning_curve_{n_layers}_{suffix}.png",
+                    save_path=f"./img/{self.save_folder}/reward_learning_curve_{suffix}.png",
                 )
 
 
