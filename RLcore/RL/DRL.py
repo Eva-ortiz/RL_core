@@ -1341,23 +1341,14 @@ class DQN_agent(DRL_agent):
         reset_options = kwargs.get("reset_options", False)
 
         # basic checks of input values
-        if epsilon > 1 or epsilon < 0:
-            raise ValueError("Epsilon must be a number between 0 and 1.")
-        if lr > 1 or lr < 0:
-            raise ValueError("Learnig rate must be a number between 0 and 1.")
-        if discount_rate > 1 or discount_rate < 0:
-            raise ValueError("Discount rate must be a number between 0 and 1.")
-        if plot_learning_curves and reward_curve_steps_per_point is None:
-            warnings.warn(
-                """In order to plot reward curves,
-                `reward_curve_steps_per_point` must be other than None.""",
-                stacklevel=1,
-            )
-        if not set(reward_curve_mode) <= {"return", "last_reward", "best_reward"}:
-            raise ValueError(
-                """Invalid reward curve mode. Please, select 'return',
-                'last_reward' or 'best_reward'."""
-            )
+        self._check_train_inputs(
+            epsilon,
+            lr,
+            discount_rate,
+            plot_learning_curves,
+            reward_curve_mode,
+            reward_curve_steps_per_point,
+        )
         if target_estimation_mode not in ["regular", "target network", "double"]:
             raise ValueError(
                 """Invalid `target estimation mode`. Please, select 'regular',
