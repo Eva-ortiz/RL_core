@@ -496,7 +496,7 @@ class DRL_agent(agent):
     def _act(
         self,
         mode: Literal["greedy", "epsilon_greedy"],
-        state_label: str,
+        state_norm: State_norm,
         q_net: QNN,
         device: Literal["cuda", "mps", "cpu"],
         **kwargs,
@@ -512,15 +512,15 @@ class DRL_agent(agent):
             We can select:
                 * "greedy" actions
                 * "epsilon_greedy" actions
-        state_label : str
-            Current state label of the agent.
+        state_norm: State_norm
+            Normalized state where the agent currently is.
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
 
-        ** kwargs
+        **kwargs
             epsilon : float
                 Value of epsilon in epsilon greedy policy. With higher
                 epsilon, more exploratory behaviour of the policy.
@@ -540,17 +540,12 @@ class DRL_agent(agent):
         ----------
         ..[1] https://pytorch.org/docs/stable/generated/torch.max.html#torch.max
         """
-        # Transform state form label to list[int]
-        state_list = str_to_tuple_or_list(state_label, to="list")
-
         # Obtain the action-state values for all actions from input `state`
-        # It is necessary to set input as float32 so Pythorch does not return
-        # us a `RuntimeError` due dtypes
         # Additionally, execute the forward pass at the same device we are using for
         # training to avoid a Pytorch `RuntimeError`
-        q_values = q_net.forward(
-            torch.from_numpy(np.array(state_list, dtype=np.float32)).to(device)
-        )
+        # OUTDATED : It is necessary to set input as float32 so Pythorch does
+        # not return us a `RuntimeError` due dtypes
+        q_values = q_net.forward(torch.from_numpy(state_norm).to(device))
 
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
