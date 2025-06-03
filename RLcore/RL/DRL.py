@@ -428,7 +428,7 @@ class DRL_agent(agent):
                 action_idx
             )
             # store reached states
-            reached_states.add(next_state_norm)
+            reached_states.add(tuple(next_state_norm))
 
             # store the transition
             if not follow_next_action:
@@ -874,7 +874,7 @@ class DRL_agent(agent):
 
             # store unique visited states with the usage of set
             for state_norm in batch_visited_states_norm:
-                visited_states_norm.add(state_norm)
+                visited_states_norm.add(tuple(state_norm))
 
             # -------------------------------------------------------------------------
             # Step 1.2: use the batch experiences to get several pairs
@@ -1477,7 +1477,7 @@ class DQN_agent(DRL_agent):
                 for experience in batch:
                     # store unique visited states during the network training
                     # with the usage of set
-                    visited_states_norm.add(experience.state_norm)
+                    visited_states_norm.add(tuple(experience.state_norm))
 
                     # Obtain ALL the q value estimations of the net for state.
                     # It is necessary to set input as float32 so Pytorch does
