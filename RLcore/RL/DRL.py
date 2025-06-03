@@ -784,7 +784,7 @@ class DRL_agent(agent):
 
         # Output dim will be given by the number of possible actions for each
         # state, i. e., number of possible actions.
-        out_dim = environment.action_space.shape[0]
+        out_dim = environment.action_space.n
 
         # create the neural network
         q_net = QNN(
@@ -1370,7 +1370,7 @@ class DQN_agent(DRL_agent):
 
         # Output dim will be given by the number of possible actions for each
         # state, i. e., number of possible actions.
-        out_dim = environment.action_space.shape[0]
+        out_dim = environment.action_space.n
 
         # create the neural network
         q_net = QNN(
