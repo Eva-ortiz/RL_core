@@ -272,7 +272,7 @@ if __name__ == "__main__":
     approximated_simulation(
         env="TODO : gym.Env class",
         train=False,  # allow to train
-        episode_eval=True,  # allow for greedy episode
+        greedy_eval=True,  # allow for greedy episode
         algorithm="TODO : Literal['Sarsa', 'Q-learning', 'double_Q-learning']",
         monitor_train=True,
         logging_level="warn",
