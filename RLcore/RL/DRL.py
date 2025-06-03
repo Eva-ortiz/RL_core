@@ -959,29 +959,6 @@ class DRL_agent(agent):
 
                     batch_targets.append(target_q_value)
 
-                # Update stored unique reached states. If an state has been
-                # already reached (we know its contribution to the reward), max
-                # reward will be the same, as we are not discovering a new
-                # contribution.
-                if experience.next_state not in known_states_list:
-                    (
-                        updated_training_best_htc,
-                        training_best_reward,
-                        known_states_list,
-                        max_htc_vs_known_state,
-                    ) = self._update_max_htc_vs_known_state(
-                        experience,
-                        environment,
-                        known_states_list,
-                        training_best_htc,
-                        training_best_reward,
-                        max_htc_vs_known_state,
-                        step,
-                    )
-                    # update `training_best_htc` after checking its increase (it
-                    # should not change if it has not increased)
-                    training_best_htc = updated_training_best_htc
-
             # get the loss of the action value to update in the q net
             # detach indicates to not follow the gradient for the target, as it
             # implies the use of the q net too
@@ -1115,99 +1092,6 @@ class DRL_agent(agent):
             logging.info(
                 f"\tLayer {n_layer} with {shapes[0]} inputs and {shapes[1]} neurons"
             )
-
-    def _update_max_htc_vs_known_state(
-        self,
-        experience: namedtuple,
-        environment: gym.Env,
-        known_states_list: list[str],
-        discovered_best_htc: float,
-        discovered_best_reward: float,
-        max_htc_vs_known_state: learning_curve,
-        step: int | None = None,
-    ) -> tuple[float, float, list[str], learning_curve]:
-        """Update learning curve, known states and and retrieve training best values.
-
-        Specifically, update `max_htc_vs_known_state` learning curve and
-        retrieve `training_best_htc` and `training_best_reward`, in addition to
-        update known states list.
-
-        Parameters
-        ----------
-        experience: namedtuple
-            Experience of (s, a, r, s') to use in order to update the learning
-            curve and known_states_list.
-        environment: environment
-            Environment of the simulation, used to:
-                * Retrieve `htc_value` of the experience.
-        known_states_list: list[str]
-            List of known states, i.e., for which htc has been computed.
-        discovered_best_htc: float
-            Best htc seen so far.
-        discovered_best_reward: float
-            Best reward seen so far.
-        max_htc_vs_known_state: learning_curve
-            Learning curve storing max htc seen as a function of number of known
-            states. Updated inside this utility.
-        step: Optional[int], optional
-            Training step, for informative purposes in case a better htc is
-            found. If None, do not display this information. By default, None.
-
-        Returns
-        -------
-        discovered_best_htc : float
-            Best htc discovered.
-        discovered_best_reward : float
-            Best reward of the RL problem discovered.
-        known_states_list : list[str]
-            List of known states. Remember known state is not the same as
-            visited state, it is defined as the states of which htc is known.
-        max_htc_vs_known_state : learning_curve
-            Updated learning curve with discovered max htc vs number of known
-            states.
-
-        Raises
-        ------
-        ValueError
-            If `next_state` stored in input `experience` already is in
-            `known_states_list`.
-
-        Warnings
-        --------
-        * Because of the use case of this method, htc value of s' of input
-          experience is assumed to be stored in the environment.
-        * For HTC problem, `known_states_list` is equivalente to the storage of
-          all `next_state`. This is due to the fact that the reward for the HTC
-          problem is only defined based on the HTC of the next state.
-        """
-        if experience.next_state in known_states_list:
-            raise ValueError("Input next state already known.")
-
-        known_states_list.append(experience.next_state)
-
-        # store the best htc, reward and state label found during training
-        experience_htc = environment.htc_values[experience.next_state]
-
-        if experience_htc > discovered_best_htc:
-            discovered_best_htc = experience_htc
-            discovered_best_reward = experience.reward
-
-            if step is not None:
-                logging.info(
-                    f"""Better state found at step {step} and state number
-                     {len(known_states_list)}: {experience.next_state}
-                     ({experience_htc})"""
-                )
-
-        # save items for max htc - state curve
-        max_htc_vs_known_state.update(discovered_best_htc, len(known_states_list))
-
-        return (
-            discovered_best_htc,
-            discovered_best_reward,
-            known_states_list,
-            max_htc_vs_known_state,
-        )
 
     def _update_reward_curves(
         self,
@@ -1624,7 +1508,6 @@ class DQN_agent(DRL_agent):
         visited_states = set()
         training_best_reward = -np.inf
         known_states_list = []
-        memory_best_htc = -np.inf
         # initialize best htc value
         training_best_htc = -np.inf
 
@@ -1643,22 +1526,6 @@ class DQN_agent(DRL_agent):
                 stacklevel=1,
             )
         max_htc_vs_known_state = learning_curve()
-
-        # store explored states already gathered in memory replay during its
-        # initialization and update `max_htc_vs_known_state`
-        for experience in replay_memory.memory:
-            if experience.next_state not in known_states_list:
-                (memory_best_htc, _, known_states_list, max_htc_vs_known_state) = (
-                    self._update_max_htc_vs_known_state(
-                        experience,
-                        environment,
-                        known_states_list,
-                        memory_best_htc,
-                        _,
-                        max_htc_vs_known_state,
-                        step,
-                    )
-                )
 
         # ------ ALGORITHM ------
         # loop during a determined number of steps or until convergence
@@ -1686,24 +1553,6 @@ class DQN_agent(DRL_agent):
 
             # store the transition
             replay_memory.push(new_experiences)
-
-            # Store unique known states and max htc when a new experience is
-            # generated. If an state is known (we know its htc), max htc will
-            # not be modified, as we are not discovering a new htc.
-            # Best htc during MEMORY GENERATION.
-            for experience in new_experiences:
-                if experience.next_state not in known_states_list:
-                    (memory_best_htc, _, known_states_list, max_htc_vs_known_state) = (
-                        self._update_max_htc_vs_known_state(
-                            experience,
-                            environment,
-                            known_states_list,
-                            memory_best_htc,
-                            _,
-                            max_htc_vs_known_state,
-                            step,
-                        )
-                    )
 
             for _ in range(n_batch_per_step):
                 # ----------------------------------------------------------------------
