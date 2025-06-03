@@ -12,7 +12,6 @@ import torch.optim as optim
 from basics import agent
 from environment import ENV, Action, Reward, Setup_mode, State, State_norm
 from plots import learning_curve
-from utils import HTC_units_label
 
 from RLcore.utils import str_to_tuple_or_list
 
@@ -1652,38 +1651,4 @@ class DQN_agent(DRL_agent):
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
         if plot_learning_curves:
-            # obtain units label
-            units_label = HTC_units_label(environment.reward_reduction_factor)
-
-            loss_curve.plot(
-                title="",
-                xlabel="Training step",
-                ylabel="MAE loss",
-                plot_epsilon=True,
-                plot_lr=False,
-                save_path=f"./img/{self.save_folder}/Loss_learning_curve_{environment.n_layers}.png",
-            )
-
-            if reward_curve_steps_per_point is not None:
-                for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                    if reward_curve_mode_ == "return":
-                        reward_ylabel = f"Return ({units_label})"
-                        suffix = "return"
-                    elif reward_curve_mode_ == "last_reward":
-                        reward_ylabel = (
-                            f"Last reward of greedy simulation ({units_label})"
-                        )
-                        suffix = "last_reward"
-                    elif reward_curve_mode_ == "best_reward":
-                        reward_ylabel = f"Maximum reward ({units_label})"
-                        suffix = "best_reward"
-
-                    reward_curves[idx].plot(
-                        title="",
-                        xlabel="Training step",
-                        ylabel=reward_ylabel,
-                        plot_epsilon=True,
-                        plot_lr=False,
-                        y_divisor=None,
-                        save_path=f"./img/{self.save_folder}/Reward_learning_curve_{environment.n_layers}_{suffix}.png",
-                    )
+            self._plot_learning_curves(loss_curve, reward_curves, reward_curve_mode)
