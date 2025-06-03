@@ -4,8 +4,7 @@ debug_counter = 1000
 
 # ----------- environment generic config -----------
 [environment]
-max_transitions = 500
-max_episode_steps = 64
+max_transitions = 50
 
 [environment.plots]
 reward_curve_mode = ["last_reward", "return", "best_reward"]
