@@ -1203,7 +1203,7 @@ class DQN_agent(DRL_agent):
         self,
         algorithm: Literal["Q-learning", "double_Q-learning"],
         actions: np.typing.ArrayLike,
-        save_folder: str = "DRL_results",
+        save_folder: str = "(D)QN_results",
         seed: int | None = None,
         verbose: bool = False,
         **kwargs,
