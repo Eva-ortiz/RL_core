@@ -13,8 +13,6 @@ from basics import agent
 from environment import ENV, Action, Reward, Setup_mode, State, State_norm
 from plots import learning_curve
 
-from RLcore.utils import str_to_tuple_or_list
-
 transition = namedtuple(
     "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
 )
@@ -1454,7 +1452,7 @@ class DQN_agent(DRL_agent):
                 environment=environment,
                 device=device,
                 epsilon=epsilon,
-                initial_state=replay_memory.memory[-1].next_state,
+                initial_state=replay_memory.memory[-1].next_state_norm,
                 follow_next_action=False,
                 decorrelated=decorrelated,
                 reset_options=reset_options,
@@ -1481,19 +1479,13 @@ class DQN_agent(DRL_agent):
                     # with the usage of set
                     visited_states_norm.add(experience.state_norm)
 
-                    # Transform state form label to list[int]
-                    state_list = str_to_tuple_or_list(experience.state, to="list")
-
-                    # obtain ALL the q value estimations of the net for state
-                    # It is necessary to set input as float32 so Pythorch does not
-                    # return us a `RuntimeError` due dtypes
+                    # Obtain ALL the q value estimations of the net for state.
+                    # OUTDATED: It is necessary to set input as float32 so
+                    # Pythorch does not return us a `RuntimeError` due dtypes.
                     # Additionally, execute the forward pass at the same device we
-                    # are using for training to avoid a Pytorch `RuntimeError`
-
+                    # are using for training to avoid a Pytorch `RuntimeError`.
                     estimated_q_values = q_net.forward(
-                        torch.from_numpy(np.array(state_list, dtype=np.float32)).to(
-                            device
-                        )
+                        torch.from_numpy(experience.state_norm).to(device)
                     )
                     batch_estimations.append(estimated_q_values[experience.action_idx])
 
@@ -1508,7 +1500,7 @@ class DQN_agent(DRL_agent):
                         # greedy action as target behaviour for Q-learning
                         next_action_idx, next_q_value, _ = self._act(
                             "greedy",
-                            experience.next_state,
+                            experience.next_state_norm,
                             q_net=network_for_target_estimation,
                             device=device,
                         )
@@ -1516,15 +1508,9 @@ class DQN_agent(DRL_agent):
                         # double DQN: take the q value from target network with
                         # action obtained from trained network
                         if target_estimation_mode == "double":
-                            # next state
-                            next_state_list = str_to_tuple_or_list(
-                                experience.next_state, to="list"
-                            )
-                            # all `q_net_target` q values
+                            # all `q_net_target` q values from next state
                             target_net_q_values = q_net_target.forward(
-                                torch.from_numpy(
-                                    np.array(next_state_list, dtype=np.float32)
-                                ).to(device)
+                                torch.from_numpy(experience.next_state_norm).to(device)
                             )
                             # select next q value form target network with
                             # greedy action from trained network
