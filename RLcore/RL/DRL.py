@@ -905,7 +905,9 @@ class DRL_agent(agent):
                         # 1- obtain the action-state values for all actions from
                         # `next_state_norm`
                         next_q_values = q_net.forward(
-                            torch.from_numpy(experience.next_state_norm).to(device)
+                            torch.from_numpy(
+                                experience.next_state_norm.astype(np.float32)
+                            ).to(device)
                         )
                         # 2- get action value with selected next_action index
                         next_q_value = next_q_values[experience.next_action_idx]
@@ -1512,7 +1514,9 @@ class DQN_agent(DRL_agent):
                         if target_estimation_mode == "double":
                             # all `q_net_target` q values from next state
                             target_net_q_values = q_net_target.forward(
-                                torch.from_numpy(experience.next_state_norm).to(device)
+                                torch.from_numpy(
+                                    experience.next_state_norm.astype(np.float32)
+                                ).to(device)
                             )
                             # select next q value form target network with
                             # greedy action from trained network
