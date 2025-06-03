@@ -214,7 +214,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         elif self.init_env is None and self.init_state is None:
             # define a random current environment state
             current_env = self._random_env_state()
-            while self._termination(current_env):
+            while self._termination(current_env[self.state_cols]):
                 current_env = self._random_env_state()
             self.current_env = current_env
             # compute norm_state for later return
