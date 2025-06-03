@@ -15,22 +15,6 @@ lr = false # lr curve
 
 [environment.reward]
 
-# ----------- RHT generic config -----------
-[RHT.environment]
-materials = [0, 1]
-gap_nm = 10
-layer_width_nm = 5
-
-n_layers = 16
-
-start_state = "zeros" # + info: `environment.__init__`
-
-htc_path = "./data/HTC"
-reward_def = "htc_delta"
-ref_state_label = "1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1" # only necessary if `reward_def` is `htc_delta`
-reward_reduction_factor = 1e5
-
-
 # ----------- Approximated Sarsa algorithm config -----------
 [DRL.Sarsa.hiperparams]
 hidden_layers = 4
