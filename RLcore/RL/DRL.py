@@ -1210,10 +1210,8 @@ class DRL_agent(agent):
                     reward_ylabel = "Greedy test return"
                 elif reward_curve_mode_ == "last_reward":
                     reward_ylabel = "Last reward of greedy simulation"
-                    suffix = "last_reward"
                 elif reward_curve_mode_ == "best_reward":
                     reward_ylabel = "Maximum reward"
-                    suffix = "best_reward"
 
                 reward_curves[idx].plot(
                     title="",
@@ -1222,7 +1220,7 @@ class DRL_agent(agent):
                     plot_epsilon=True,
                     plot_lr=False,
                     y_divisor=None,
-                    save_path=f"./img/{self.save_folder}/reward_learning_curve_{suffix}.png",
+                    save_path=f"./img/{self.save_folder}/reward_learning_curve_{reward_curve_mode_}.png",
                 )
 
 
