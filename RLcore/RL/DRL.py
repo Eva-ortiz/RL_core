@@ -1459,6 +1459,7 @@ class DQN_agent(DRL_agent):
                 device=device,
                 epsilon=epsilon,
                 initial_state=replay_memory.memory[-1].next_state_norm,
+                initial_action=None,
                 follow_next_action=False,
                 decorrelated=decorrelated,
                 reset_options=reset_options,
