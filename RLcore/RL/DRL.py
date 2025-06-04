@@ -316,6 +316,8 @@ class DRL_agent(agent):
         tuple[State_norm],
         State_norm,
         Action | None,
+        int,
+        dict[str, Any],
     ]:
         """Generate experiences consisting of states, actions and rewards.
 
@@ -352,6 +354,10 @@ class DRL_agent(agent):
             reset_options : dict, optional
                 Additional information to specify how the environment is reset
                 (depending on the specific environment). By default, None.
+            episode_length : int
+                Track of episode length, useful when input environment has
+                already taken few steps but did not reach a terminal state.
+                If not provided, it is assumed to be 0.
 
         Returns
         -------
@@ -370,6 +376,13 @@ class DRL_agent(agent):
         last_next_action : Action | None
             Last action a' performed. Useful to continue the sequence of
             generated experiences.
+        episode_length : int
+            Current track of episode length, useful to continue from last
+            unfinished episode, this is, from last next_state.
+        info : dict[str, Any]
+            Additional info about experience generation, such as,
+                * episodes longitude: if decorrelated samples, it will always be
+                    0 as episode length can not be tracked.
 
         Warnings
         --------
@@ -417,9 +430,11 @@ class DRL_agent(agent):
         experiences = []
         visited_states_norm = set()
         reached_states = set()
+        info = {"episode_lengths": []}
 
         # TODO : obtain actions with vectorized environments, for ref see
         # MaskablePPO.collect_rollouts
+        episode_length = kwargs.get("episode_length", 0)
         for _ in range(n_experiences):
             # if decorrelated selected, randomly select next state and set the
             # environment to this state
@@ -449,6 +464,8 @@ class DRL_agent(agent):
             next_state_norm, reward, terminated, truncated, _ = environment.step(
                 action_idx
             )
+            # add an step to episode length if not decorrelated samples
+            episode_length += 1 if not decorrelated else 0
             # store reached states
             reached_states.add(tuple(next_state_norm))
 
@@ -487,6 +504,11 @@ class DRL_agent(agent):
                 else (next_state_norm, _)
             )
 
+            # check the end of the episode also for episode length track
+            if terminated or truncated:
+                info["episode_lengths"].append(episode_length)
+                episode_length = 0
+
             # If follow_next_action is selected, force reset action to None if
             # terminated or truncated has been reached. Otherwise, set action to
             # next_action.
@@ -506,6 +528,8 @@ class DRL_agent(agent):
             reached_states,
             state_norm,
             action_idx,
+            episode_length,
+            info,
         )
 
     def _act(
