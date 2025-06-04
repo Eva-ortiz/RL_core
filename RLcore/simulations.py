@@ -115,7 +115,7 @@ def approximated_simulation(
     algorithm: Literal["Sarsa", "Q-learning", "double_Q-learning"],
     monitor_train: bool = True,
     logging_level: str = "warn",
-    model_path: Path = Path("./models/"),
+    model_path: Path | None = None,
     conf_path: str = "./config.toml",
     seed: int | None = None,
     **env_kwargs,
@@ -143,9 +143,9 @@ def approximated_simulation(
     logging_level : str, optional
         Select logging level. Additionally, if `debug`/`info` are selected, set
         verbose to True, else, to False. By default, `warn`.
-    model_path : Path, optional
-        Parent path where agents and their evaluation info are saved.
-        By default, Path("./models/").
+    model_path : Path | None, optional
+        Parent path where agents and their evaluation info are saved. If None,
+        default folder of each algorithm. By default, None.
     conf_path : str, optional
         Configuration file path. By default, Path("./config.toml").
     seed : int | None, optional
