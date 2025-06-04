@@ -184,7 +184,7 @@ class DRL_agent(agent):
     def greedy_simulation(
         self,
         q_net: QNN,
-        environment: ENV,
+        env: ENV,
         max_steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
@@ -196,7 +196,7 @@ class DRL_agent(agent):
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
-        environment : ENV
+        env : ENV
             Environment object of the problem, reset to perform the simulation.
         max_steps : int
             Maximum number of steps of the simulation. If `end_episode` reached,
@@ -239,7 +239,7 @@ class DRL_agent(agent):
         best_reward = -np.inf
 
         # reset the environment for this simulation and select start state
-        state_norm, _ = environment.reset(seed=self.seed, options=reset_options)
+        state_norm, _ = env.reset(seed=self.seed, options=reset_options)
 
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
@@ -253,7 +253,7 @@ class DRL_agent(agent):
             )
 
             # observe response of the environment
-            state_norm, reward, terminated, truncated, _ = environment.step(action_idx)
+            state_norm, reward, terminated, truncated, _ = env.step(action_idx)
 
             # store best reward of the simulation
             if reward > best_reward:
@@ -1133,7 +1133,7 @@ class DRL_agent(agent):
         # make a small simulation to get the rewards of the net for an episode
         overall_return, last_reward, _, _, _ = self.greedy_simulation(
             q_net=q_net,
-            environment=copy.deepcopy(environment),  # [1]
+            env=copy.deepcopy(environment),  # [1]
             max_steps=steps_per_point,
             device=device,
             reset_options=reset_options,

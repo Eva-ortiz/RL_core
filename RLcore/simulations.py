@@ -253,7 +253,7 @@ def approximated_simulation(
 
         agent.greedy_simulation(
             q_net=agent.q_net,
-            environment=eval_env,  # [3]
+            env=eval_env,  # [3]
             max_steps=cfg_env["max_transitions"],
             device=device,
             reset_options=cfg_hiperpar["train"].get("reset_options", None),
