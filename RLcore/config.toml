@@ -24,7 +24,6 @@ batch_size = 32
 decorrelated = false
 step_count = true
 
-episode_start_state = "initial" # + info: DRL_agent.train kwargs
 max_steps = 30000
 tol_loss = -inf
 
@@ -46,7 +45,6 @@ batch_size = 32
 decorrelated = false
 step_count = true
 
-episode_start_state = "initial" # + info: DRL_agent.train kwargs
 max_steps = 20000
 tol_loss = -inf
 
