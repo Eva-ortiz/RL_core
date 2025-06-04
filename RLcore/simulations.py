@@ -229,6 +229,8 @@ def approximated_simulation(
         # print execution time of this problem
         timer(start_time, time.time())
 
+        logging.info(f"""Number of visited states: {len(agent.visited_states_norm)}""")
+
     # ------------- output relevant data -------------
     if greedy_eval:
         eval_env = env(**env_kwargs)
@@ -256,8 +258,6 @@ def approximated_simulation(
             device=device,
             reset_options=cfg_hiperpar["train"].get("reset_options", None),
         )
-
-        logging.info(f"""Number of visited states: {len(agent.visited_states_norm)}""")
 
     print("DEEP REINFORCEMENT LEARNING IS DONE!")
 
