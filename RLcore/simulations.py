@@ -242,6 +242,8 @@ def approximated_simulation(
             hidden_layers=cfg_hiperpar["hidden_layers"],
             hidden_neur=cfg_hiperpar["hidden_neur"],
         )
+        # load its network
+        agent.load_net(in_dim=eval_env.observation_space.shape[0], device=device)
 
         agent.greedy_simulation(
             q_net=agent.q_net,
