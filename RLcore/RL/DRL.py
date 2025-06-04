@@ -2,6 +2,7 @@ import copy
 import logging
 import warnings
 from collections import deque, namedtuple
+from pathlib import Path
 from typing import Any, Literal
 
 import gymnasium as gym
@@ -1013,8 +1014,11 @@ class DRL_agent(agent):
         self,
         in_dim: int,
         device: Literal["cuda", "mps", "cpu"],
+        model_path: Path | None = None,
     ):
         """Load agent network."""
+        save_folder = self.save_folder if model_path is None else model_path
+
         # Input dim is the number of aspects that define our state.
         # Output dim will be given by the number of possible actions for each
         # state, i. e., number of possible actions.
@@ -1029,7 +1033,7 @@ class DRL_agent(agent):
         )
 
         # load weights and biases
-        w_and_b = torch.load(f"./data/{self.save_folder}/q_net_{in_dim}_inputs.pt")
+        w_and_b = torch.load(f"./data/{save_folder}/q_net_{in_dim}_inputs.pt")
         # load weights and biases into created neural network object
         # employ `w_and_b` for the net before any operation to avoid consuming
         # the iterable
