@@ -271,7 +271,7 @@ class DRL_agent(agent):
 
             # store taken actions labels, transitioned to states and obtained rewards
             episode_actions_labels.append(action_label)
-            episode_states.append([env.current_env[self.state_cols]])
+            episode_states.append(env.current_env[self.state_cols])
             episode_rewards.append(reward)
 
             # store step info
