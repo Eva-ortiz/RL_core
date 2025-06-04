@@ -1153,7 +1153,7 @@ class DRL_agent(agent):
             )
 
         # make a small simulation to get the rewards of the net for an episode
-        overall_return, last_reward, _, _, _ = self.greedy_simulation(
+        overall_return, _, _, _, episode_rewards, _ = self.greedy_simulation(
             q_net=q_net,
             env=copy.deepcopy(environment),  # [1]
             max_steps=steps_per_point,
@@ -1164,7 +1164,7 @@ class DRL_agent(agent):
             if reward_curve_mode_ == "return":
                 step_reward = overall_return
             elif reward_curve_mode_ == "last_reward":
-                step_reward = last_reward
+                step_reward = episode_rewards[-1]
             elif reward_curve_mode_ == "best_reward":
                 step_reward = training_best_reward
             # update learning curves
