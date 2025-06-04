@@ -211,15 +211,16 @@ class DRL_agent(agent):
         -------
         overall_return : float
             Value of the return for the greedy simulation.
-        last_reward : Reward
-            Value of the last reward of the simulation.
         best_reward : Reward
             Value of the best reward seen during the simulation.
-        last_state_norm : State_norm
-            Last visited state (normalized). Useful to continue the trajectory
-            of (s, a, r, s') generated.
-        last_action : str
-            Label of the last action performed. For informative purposes.
+        episode_actions_labels : deque[str]
+            Labels of actions performed along greedy episode.
+        episode_states : deque[State]
+            States transitioned to during greedy episode.
+        episode_rewards : deque[Reward]
+            Rewards obtained from transitions along the greedy episode.
+        info_list : list[dict[str, Any]]
+            Additional information about taken steps.
 
         Warnings
         --------
@@ -241,6 +242,12 @@ class DRL_agent(agent):
         # reset the environment for this simulation and select start state
         state_norm, _ = env.reset(seed=self.seed, options=reset_options)
 
+        # initialize storage of further environment components and rewards
+        episode_actions_labels = deque([None])
+        episode_states = deque([env.current_env[self.state_cols]])
+        episode_rewards = deque([None])
+        info_list = []
+
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
             # get action with greedy policy, as we want to evaluate the
@@ -253,7 +260,7 @@ class DRL_agent(agent):
             )
 
             # observe response of the environment
-            state_norm, reward, terminated, truncated, _ = env.step(action_idx)
+            state_norm, reward, terminated, truncated, info = env.step(action_idx)
 
             # store best reward of the simulation
             if reward > best_reward:
@@ -261,6 +268,14 @@ class DRL_agent(agent):
 
             # store the return of the simulation
             overall_return += reward
+
+            # store taken actions labels, transitioned to states and obtained rewards
+            episode_actions_labels.append(action_label)
+            episode_states.append([env.current_env[self.state_cols]])
+            episode_rewards.append(reward)
+
+            # store step info
+            info_list.append(info)
 
             if terminated or truncated:
                 reason_str = "TERMINATED" if terminated else "TRUNCATED"
@@ -274,7 +289,14 @@ class DRL_agent(agent):
 
         # output the return, last reward value, best reward value and last state
         # (normalized) and last action label
-        return overall_return, reward, best_reward, state_norm, action_label
+        return (
+            overall_return,
+            best_reward,
+            episode_actions_labels,
+            episode_states,
+            episode_rewards,
+            info_list,
+        )
 
     def _experience_generation(
         self,
