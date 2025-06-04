@@ -252,9 +252,9 @@ def approximated_simulation(
         agent.greedy_simulation(
             q_net=agent.q_net,
             environment=eval_env,  # [3]
-            start_state=cfg_hiperpar["episode_start_state"],
-            steps=cfg_env["max_transitions"],
+            max_steps=cfg_env["max_transitions"],
             device=device,
+            reset_options=cfg_hiperpar["train"].get("reset_options", None),
         )
 
         logging.info(f"""Number of visited states: {len(agent.visited_states_norm)}""")
