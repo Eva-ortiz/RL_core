@@ -643,9 +643,13 @@ class DRL_agent(agent):
                 `reward_curve_steps_per_point` must be other than None.""",
                 stacklevel=1,
             )
-        if not set(reward_curve_mode) <= {"return", "last_reward", "best_reward"}:
+        if not set(reward_curve_mode) <= {
+            "greedy_return",
+            "last_reward",
+            "best_reward",
+        }:
             raise ValueError(
-                """Invalid reward curve mode. Please, select 'return',
+                """Invalid reward curve mode. Please, select 'greedy_return',
                 'last_reward' or 'best_reward'."""
             )
 
@@ -708,13 +712,13 @@ class DRL_agent(agent):
 
             reward_curve_mode : list[str], optional
                 List with the selection of the rewards to record at `reward_curve`:
-                    * return : plot the return of the start state for each
-                        simulation.
+                    * greedy_return : plot the return of the start state for
+                        each greedy simulation.
                     * last_reward : plot the reward of the last step of each
-                        simulation.
+                        greedy simulation.
                     * best_reward : plot the best reward seen during all the
-                      training.
-                By default, ["return", "last_reward", "best_reward"]
+                        training.
+                By default, ["greedy_return", "last_reward", "best_reward"]
             reward_curve_steps_per_point : Optional[int], optional
                 Select the number of steps for each one of the simulated
                 episodes created to plot each point of the reward curve.
@@ -777,7 +781,7 @@ class DRL_agent(agent):
         min_lr = kwargs.get("min_lr", 0.0)
 
         reward_curve_mode = kwargs.get(
-            "reward_curve_mode", ["return", "last_reward", "best_reward"]
+            "reward_curve_mode", ["greedy_return", "last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
         debug_counter = kwargs.get("debug_counter", 1)
@@ -1013,7 +1017,7 @@ class DRL_agent(agent):
         self.loss_curve = loss_curve
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                if reward_curve_mode_ == "return":
+                if reward_curve_mode_ == "greedy_return":
                     self.reward_curve_return = reward_curves[idx]
                 elif reward_curve_mode_ == "last_reward":
                     self.reward_curve_last_reward = reward_curves[idx]
@@ -1161,7 +1165,7 @@ class DRL_agent(agent):
             reset_options=reset_options,
         )
         for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-            if reward_curve_mode_ == "return":
+            if reward_curve_mode_ == "greedy_return":
                 step_reward = overall_return
             elif reward_curve_mode_ == "last_reward":
                 step_reward = episode_rewards[-1]
@@ -1202,9 +1206,8 @@ class DRL_agent(agent):
 
         if len(reward_curves) != 0:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                if reward_curve_mode_ == "return":
-                    reward_ylabel = "Return"
-                    suffix = "return"
+                if reward_curve_mode_ == "greedy_return":
+                    reward_ylabel = "Greedy test return"
                 elif reward_curve_mode_ == "last_reward":
                     reward_ylabel = "Last reward of greedy simulation"
                     suffix = "last_reward"
@@ -1357,7 +1360,7 @@ class DQN_agent(DRL_agent):
         min_lr = kwargs.get("min_lr", 0.0)
 
         reward_curve_mode = kwargs.get(
-            "reward_curve_mode", ["return", "last_reward", "best_reward"]
+            "reward_curve_mode", ["greedy_return", "last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
         debug_counter = kwargs.get("debug_counter", 1)
@@ -1637,7 +1640,7 @@ class DQN_agent(DRL_agent):
         self.loss_curve = loss_curve
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                if reward_curve_mode_ == "return":
+                if reward_curve_mode_ == "greedy_return":
                     self.reward_curve_return = reward_curves[idx]
                 elif reward_curve_mode_ == "last_reward":
                     self.reward_curve_last_reward = reward_curves[idx]
