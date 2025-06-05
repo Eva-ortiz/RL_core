@@ -35,7 +35,7 @@ class ReplayMemory:
     """
 
     def __init__(self, capacity, agent, **kwargs):
-        experiences, self.visited_states_norm, self.reached_states, _, _ = (
+        experiences, self.visited_states_norm, self.reached_states, _, _, _ = (
             agent._experience_generation(**kwargs)
         )
         self.memory = deque(experiences, maxlen=capacity)
@@ -854,14 +854,16 @@ class DRL_agent(agent):
         # Step 1: perform the training of the system
         # -------------------------------------------------------------------------
         # ------ INITIALIZATION ------
-        # initialize epsilon, amount of loss and storage of best reward seen
-        # along all the training
+        # initialize step count, amount of loss, storage of best reward seen
+        # along all the training and episode length track
         step = 1
         loss = np.inf
         training_best_reward = -np.inf
+        episode_length = 0
 
         # initialize learning curves
         loss_curve = learning_curve()
+        mean_ep_len_curve = learning_curve()
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -907,6 +909,8 @@ class DRL_agent(agent):
                 _,
                 last_batch_state_norm,
                 last_batch_action,
+                last_episode_length,
+                experiences_info,
             ) = self._experience_generation(
                 batch_size,
                 q_net,
@@ -918,9 +922,11 @@ class DRL_agent(agent):
                 follow_next_action,
                 decorrelated,
                 reset_options=reset_options,
+                episode_length=episode_length,
             )
             initial_batch_state_norm = last_batch_state_norm
             initial_batch_action = last_batch_action
+            episode_length = last_episode_length
 
             # store unique visited states with the usage of set
             for state_norm in batch_visited_states_norm:
@@ -997,6 +1003,14 @@ class DRL_agent(agent):
             # update loss curve
             loss_curve.update(loss.item(), step, learning_rate=lr, epsilon=epsilon)
 
+            # update mean episode lengths curve
+            mean_ep_len_curve.update(
+                np.mean(experiences_info["episode_lengths"]),
+                step,
+                learning_rate=lr,
+                epsilon=epsilon,
+            )
+
             # update reward curves
             if reward_curve_steps_per_point is not None:
                 self._update_reward_curves(
@@ -1039,6 +1053,7 @@ class DRL_agent(agent):
         self.visited_states_norm = visited_states_norm
 
         self.loss_curve = loss_curve
+        self.mean_ep_len_curve = mean_ep_len_curve
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "greedy_return":
@@ -1058,7 +1073,9 @@ class DRL_agent(agent):
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
         if plot_learning_curves:
-            self._plot_learning_curves(loss_curve, reward_curves, reward_curve_mode)
+            self._plot_learning_curves(
+                loss_curve, reward_curves, reward_curve_mode, mean_ep_len_curve
+            )
 
     def load_net(
         self,
@@ -1203,6 +1220,7 @@ class DRL_agent(agent):
         loss_curve: learning_curve,
         reward_curves: list[learning_curve],
         reward_curve_mode: list[str],
+        mean_episode_len_curve: learning_curve,
     ):
         """Plot learning curves adapted to `DRL_agent` outputs.
 
@@ -1226,6 +1244,15 @@ class DRL_agent(agent):
             plot_epsilon=True,
             plot_lr=False,
             save_path=f"./img/{self.save_folder}/loss_learning_curve.png",
+        )
+
+        mean_episode_len_curve.plot(
+            title="",
+            ylabel="Mean of episodes length",
+            xlabel="Training step",
+            plot_epsilon=True,
+            plot_lr=True,
+            save_path=f"./img/{self.save_folder}/mean_ep_len_learning_curve.png",
         )
 
         if len(reward_curves) != 0:
@@ -1449,12 +1476,13 @@ class DQN_agent(DRL_agent):
         # Step 1: perform the training of the neural network
         # -------------------------------------------------------------------------
         # ------ INITIALIZATION ------
-        # initialize step number, amount of loss, memory of experiences,
+        # initialize step number, amount of loss, episode length, memory of experiences,
         # visited_states_norm storage, storage of best reward seen along all the
         # training, storage of known states and storage of the higher htc
         # obtained in memory experiences
         step = 1
         loss = np.inf
+        episode_length = 0
         replay_memory = ReplayMemory(
             memory_size,
             self,
@@ -1474,6 +1502,7 @@ class DQN_agent(DRL_agent):
 
         # initialize learning curves
         loss_curve = learning_curve()
+        mean_ep_len_curve = learning_curve()
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -1499,18 +1528,22 @@ class DQN_agent(DRL_agent):
             # ----------------------------------------------------
             # generate selected number of new experiences
             # continue experience storage from the state s' of the last experience
-            new_experiences, _, _, _, _ = self._experience_generation(
-                n_experiences=n_new_experiences_per_step,
-                q_net=q_net,
-                environment=environment,
-                device=device,
-                epsilon=epsilon,
-                initial_state=replay_memory.memory[-1].next_state_norm,
-                initial_action=None,
-                follow_next_action=False,
-                decorrelated=decorrelated,
-                reset_options=reset_options,
+            new_experiences, _, _, _, _, last_episode_length, experiences_info = (
+                self._experience_generation(
+                    n_experiences=n_new_experiences_per_step,
+                    q_net=q_net,
+                    environment=environment,
+                    device=device,
+                    epsilon=epsilon,
+                    initial_state=replay_memory.memory[-1].next_state_norm,
+                    initial_action=None,
+                    follow_next_action=False,
+                    decorrelated=decorrelated,
+                    reset_options=reset_options,
+                    episode_length=episode_length,
+                )
             )
+            episode_length = last_episode_length
 
             # store the transition
             replay_memory.push(new_experiences)
@@ -1607,6 +1640,14 @@ class DQN_agent(DRL_agent):
             # update loss curve when all batches per step have been processed
             loss_curve.update(loss.item(), step, learning_rate=lr, epsilon=epsilon)
 
+            # update mean episode lengths curve
+            mean_ep_len_curve.update(
+                np.mean(experiences_info["episode_lengths"]),
+                step,
+                learning_rate=lr,
+                epsilon=epsilon,
+            )
+
             # update target network weights if `n_steps_for_target_net_update`
             # is reached
             if target_estimation_mode in ["target network", "double"]:
@@ -1660,6 +1701,7 @@ class DQN_agent(DRL_agent):
         self.visited_states_norm = visited_states_norm
 
         self.loss_curve = loss_curve
+        self.mean_ep_len_curve = mean_ep_len_curve
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "greedy_return":
@@ -1679,4 +1721,6 @@ class DQN_agent(DRL_agent):
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
         if plot_learning_curves:
-            self._plot_learning_curves(loss_curve, reward_curves, reward_curve_mode)
+            self._plot_learning_curves(
+                loss_curve, reward_curves, reward_curve_mode, mean_ep_len_curve
+            )
