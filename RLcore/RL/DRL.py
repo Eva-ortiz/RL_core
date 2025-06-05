@@ -408,8 +408,6 @@ class DRL_agent(agent):
           case, a restart of the environment will be done.
         * Decorrelated transitions are given through random sampling of states.
           Several authors recommend this practice.
-        * We will skip transitions that starts at the terminal state, defined by
-          the environment (see `environment._setup`).
         """
         # check input initial action
         if initial_action is not None and not isinstance(initial_action, Action):
