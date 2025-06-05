@@ -49,7 +49,7 @@ class ReplayMemory:
         """
         for experience in experiences:
             self.memory.append(experience)
-            self.visited_states_norm.add(experience.state_norm)
+            self.visited_states_norm.add(tuple(experience.state_norm))
 
     def sample(self, batch_size, random_rng):
         """Sample `batch_size` stored experiences.
