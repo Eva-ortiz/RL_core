@@ -245,7 +245,7 @@ class DRL_agent(agent):
 
         # initialize storage of further environment components and rewards
         episode_actions_labels = deque([None])
-        episode_states = deque([env.current_env[self.state_cols]])
+        episode_states = deque([env.current_env[env.state_cols]])
         episode_rewards = deque([None])
         info_list = []
 
@@ -272,7 +272,7 @@ class DRL_agent(agent):
 
             # store taken actions labels, transitioned to states and obtained rewards
             episode_actions_labels.append(action_label)
-            episode_states.append(env.current_env[self.state_cols])
+            episode_states.append(env.current_env[env.state_cols])
             episode_rewards.append(reward)
 
             # store step info
