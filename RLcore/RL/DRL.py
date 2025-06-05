@@ -429,7 +429,7 @@ class DRL_agent(agent):
         experiences = []
         visited_states_norm = set()
         reached_states = set()
-        info = {"episode_lengths": []}
+        info = {"episode_lengths": tuple()}
 
         # TODO : obtain actions with vectorized environments, for ref see
         # MaskablePPO.collect_rollouts
@@ -505,7 +505,7 @@ class DRL_agent(agent):
 
             # check the end of the episode also for episode length track
             if terminated or truncated:
-                info["episode_lengths"].append(episode_length)
+                info["episode_lengths"] += (episode_length,)
                 episode_length = 0
 
             # If follow_next_action is selected, force reset action to None if
@@ -863,7 +863,7 @@ class DRL_agent(agent):
         # initialize learning curves
         loss_curve = learning_curve()
         mean_ep_len_curve = learning_curve()
-        episode_lengths_list = []
+        episode_lengths_tuple = tuple()
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -933,7 +933,7 @@ class DRL_agent(agent):
                 visited_states_norm.add(tuple(state_norm))
 
             # store full list of episode lengths
-            episode_lengths_list.append(experiences_info["episode_lengths"])
+            episode_lengths_tuple += experiences_info["episode_lengths"]
 
             # -------------------------------------------------------------------------
             # Step 1.2: use the batch experiences to get several pairs
@@ -1081,7 +1081,7 @@ class DRL_agent(agent):
                 reward_curves,
                 reward_curve_mode,
                 mean_ep_len_curve,
-                episode_lengths_list,
+                episode_lengths_tuple,
             )
 
     def load_net(
@@ -1228,7 +1228,7 @@ class DRL_agent(agent):
         reward_curves: list[learning_curve],
         reward_curve_mode: list[str],
         mean_episode_len_curve: learning_curve,
-        episodes_lengths: list[int],
+        episodes_lengths: tuple[int],
     ):
         """Plot learning curves adapted to `DRL_agent` outputs.
 
@@ -1534,7 +1534,7 @@ class DQN_agent(DRL_agent):
         # initialize learning curves
         loss_curve = learning_curve()
         mean_ep_len_curve = learning_curve()
-        episode_lengths_list = []
+        episode_lengths_tuple = tuple()
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -1577,7 +1577,7 @@ class DQN_agent(DRL_agent):
             )
             episode_length = last_episode_length
             # store full list of episode lengths
-            episode_lengths_list.append(experiences_info["episode_lengths"])
+            episode_lengths_tuple += experiences_info["episode_lengths"]
 
             # store the transition
             replay_memory.push(new_experiences)
@@ -1760,5 +1760,5 @@ class DQN_agent(DRL_agent):
                 reward_curves,
                 reward_curve_mode,
                 mean_ep_len_curve,
-                episode_lengths_list,
+                episode_lengths_tuple,
             )
