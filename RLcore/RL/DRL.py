@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import Any, Literal
 
 import gymnasium as gym
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from basics import agent
 from environment import ENV, Action, Reward, Setup_mode, State, State_norm
-from plots import learning_curve
+from plots import learning_curve, save_fig_df
 
 transition = namedtuple(
     "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
@@ -862,6 +863,7 @@ class DRL_agent(agent):
         # initialize learning curves
         loss_curve = learning_curve()
         mean_ep_len_curve = learning_curve()
+        episode_lengths_list = []
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -929,6 +931,9 @@ class DRL_agent(agent):
             # store unique visited states with the usage of set
             for state_norm in batch_visited_states_norm:
                 visited_states_norm.add(tuple(state_norm))
+
+            # store full list of episode lengths
+            episode_lengths_list.append(experiences_info["episode_lengths"])
 
             # -------------------------------------------------------------------------
             # Step 1.2: use the batch experiences to get several pairs
@@ -1072,7 +1077,11 @@ class DRL_agent(agent):
         # -------------------------------------------------------------------------
         if plot_learning_curves:
             self._plot_learning_curves(
-                loss_curve, reward_curves, reward_curve_mode, mean_ep_len_curve
+                loss_curve,
+                reward_curves,
+                reward_curve_mode,
+                mean_ep_len_curve,
+                episode_lengths_list,
             )
 
     def load_net(
@@ -1219,6 +1228,7 @@ class DRL_agent(agent):
         reward_curves: list[learning_curve],
         reward_curve_mode: list[str],
         mean_episode_len_curve: learning_curve,
+        episodes_lengths: list[int],
     ):
         """Plot learning curves adapted to `DRL_agent` outputs.
 
@@ -1271,6 +1281,29 @@ class DRL_agent(agent):
                     y_divisor=None,
                     save_path=f"./img/{self.save_folder}/reward_learning_curve_{reward_curve_mode_}.png",
                 )
+
+        # ---------- Episodes lengths plot ----------
+        performance = episodes_lengths
+        iterations = list(range(len(episodes_lengths)))
+        ylabel, xlabel = "Experiences", "Episode"
+        ep_len_save_path = f"./img/{self.save_folder}/episode_len_learning_curve.png"
+
+        # plot
+        fig, ax = plt.subplots(figsize=(8, 5))
+        labels_fontsize, ticks_fontsize = 10, 8
+
+        ax.set_xlabel(xlabel, fontsize=labels_fontsize)
+        ax.set_ylabel(ylabel, fontsize=labels_fontsize)
+        ax.tick_params(direction="in", top=True, right=True, labelsize=ticks_fontsize)
+
+        # learning curve
+        ax.plot(iterations, performance)
+
+        # save the created figure
+        fig.savefig(ep_len_save_path, bbox_inches="tight", dpi=800)
+        save_fig_df(
+            ep_len_save_path, x=iterations, y=performance, xlabel=xlabel, ylabel=ylabel
+        )
 
 
 class DQN_agent(DRL_agent):
@@ -1501,6 +1534,7 @@ class DQN_agent(DRL_agent):
         # initialize learning curves
         loss_curve = learning_curve()
         mean_ep_len_curve = learning_curve()
+        episode_lengths_list = []
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -1542,6 +1576,8 @@ class DQN_agent(DRL_agent):
                 )
             )
             episode_length = last_episode_length
+            # store full list of episode lengths
+            episode_lengths_list.append(experiences_info["episode_lengths"])
 
             # store the transition
             replay_memory.push(new_experiences)
@@ -1720,5 +1756,9 @@ class DQN_agent(DRL_agent):
         # -------------------------------------------------------------------------
         if plot_learning_curves:
             self._plot_learning_curves(
-                loss_curve, reward_curves, reward_curve_mode, mean_ep_len_curve
+                loss_curve,
+                reward_curves,
+                reward_curve_mode,
+                mean_ep_len_curve,
+                episode_lengths_list,
             )
