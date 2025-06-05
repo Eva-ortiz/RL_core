@@ -1057,6 +1057,7 @@ class DRL_agent(agent):
 
         self.loss_curve = loss_curve
         self.mean_ep_len_curve = mean_ep_len_curve
+        self.episode_lengths_tuple = episode_lengths_tuple
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "greedy_return":
@@ -1736,6 +1737,7 @@ class DQN_agent(DRL_agent):
 
         self.loss_curve = loss_curve
         self.mean_ep_len_curve = mean_ep_len_curve
+        self.episode_lengths_tuple = episode_lengths_tuple
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
                 if reward_curve_mode_ == "greedy_return":
