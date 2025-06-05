@@ -36,7 +36,7 @@ class ReplayMemory:
     """
 
     def __init__(self, capacity, agent, **kwargs):
-        experiences, self.visited_states_norm, self.reached_states, _, _, _ = (
+        experiences, self.visited_states_norm, self.reached_states, _, _, _, _ = (
             agent._experience_generation(**kwargs)
         )
         self.memory = deque(experiences, maxlen=capacity)
