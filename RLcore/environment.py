@@ -100,8 +100,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self.action_col = "TODO : str"
         self.state_col_1, self.state_col_2 = "TODO : str", "TODO : str"
 
-        # WARNING: `self.state_cols` order is important for the remaining
-        # pipeline
+        # WARNING: `self.state_cols` order is VERY VERY VERY important for the
+        # remaining pipeline
         self.state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
         self.env_cols = self.state_cols + ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
 
