@@ -1309,6 +1309,7 @@ class DQN_agent(DRL_agent):
         batch_size: int = 64,
         max_steps: int = np.inf,
         tol_loss: float = 0.0,
+        use_masking: bool = False,
         plot_learning_curves: bool = True,
         save_q_net: bool = True,
         memory_size: int = 10000,
@@ -1475,6 +1476,7 @@ class DQN_agent(DRL_agent):
             initial_action=None,
             follow_next_action=False,
             decorrelated=decorrelated,
+            use_masking=use_masking,
             reset_options=reset_options,
         )
         visited_states_norm = set()
@@ -1517,6 +1519,7 @@ class DQN_agent(DRL_agent):
                 initial_action=None,
                 follow_next_action=False,
                 decorrelated=decorrelated,
+                use_masking=use_masking,
                 reset_options=reset_options,
             )
 
@@ -1567,6 +1570,7 @@ class DQN_agent(DRL_agent):
                             experience.next_state_norm,
                             q_net=network_for_target_estimation,
                             device=device,
+                            action_masks=experience.next_action_masks,
                         )
 
                         # double DQN: take the q value from target network with
