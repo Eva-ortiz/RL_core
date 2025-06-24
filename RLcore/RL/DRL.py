@@ -13,13 +13,23 @@ import torch.optim as optim
 from basics import agent
 from environment import ENV, Action, Reward, Setup_mode, State, State_norm
 from plots import learning_curve
+from sb3_contrib.common.maskable.utils import get_action_masks
 
 transition = namedtuple(
-    "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
+    "transition",
+    ("state_norm", "action_idx", "action_masks", "reward", "next_state_norm"),
 )
 sarsa_transition = namedtuple(
     "transition",
-    ("state_norm", "action_idx", "reward", "next_state_norm", "next_action_idx"),
+    (
+        "state_norm",
+        "action_idx",
+        "action_masks",
+        "reward",
+        "next_state_norm",
+        "next_action_idx",
+        "next_action_masks",
+    ),
 )
 
 
@@ -287,6 +297,7 @@ class DRL_agent(agent):
         initial_action: Action | None,
         follow_next_action: bool = False,
         decorrelated: bool = False,
+        use_masking: bool = False,
         **kwargs,
     ) -> tuple[
         list[namedtuple],
@@ -325,6 +336,9 @@ class DRL_agent(agent):
         decorrelated : bool, optional
             Select if experience samples are decorrelated. If True, they will.
             By default, False.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks during experience
+            generation, by default False.
 
         ** kwargs
             reset_options : dict, optional
@@ -375,6 +389,10 @@ class DRL_agent(agent):
           Several authors recommend this practice.
         * We will skip transitions that starts at the terminal state, defined by
           the environment (see `environment._setup`).
+
+        References
+        ----------
+        ..[1] https://github.com/Stable-Baselines-Team/stable-baselines3-contrib/blob/master/sb3_contrib/ppo_mask/ppo_mask.py#L227
         """
         # check input initial action
         if initial_action is not None and not isinstance(initial_action, Action):
@@ -412,6 +430,9 @@ class DRL_agent(agent):
             # store visited states
             visited_states_norm.add(tuple(state_norm))  # solve not hashable
 
+            # if action masking, check env action masks [1]
+            action_masks = get_action_masks(environment) if use_masking else None
+
             # if action has not been provided as input, choose action with
             # behaviour policy
             if action_idx is None:
@@ -421,6 +442,7 @@ class DRL_agent(agent):
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
+                    action_masks=action_masks,
                 )
 
             # observe response of the environment
@@ -433,11 +455,17 @@ class DRL_agent(agent):
             # store the transition
             if not follow_next_action:
                 experiences.append(
-                    transition(state_norm, action_idx, reward, next_state_norm)
+                    transition(
+                        state_norm, action_idx, action_masks, reward, next_state_norm
+                    )
                 )
 
             # store sarsa transition if track_next_action is selected
             else:
+                # if action masking, check env action masks [1]
+                next_action_masks = (
+                    get_action_masks(environment) if use_masking else None
+                )
                 # perform next action too
                 next_action_idx, _, _ = self._act(
                     "epsilon_greedy",
@@ -445,6 +473,7 @@ class DRL_agent(agent):
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
+                    action_masks=next_action_masks,
                 )
 
                 # store next action in transition
@@ -452,9 +481,11 @@ class DRL_agent(agent):
                     sarsa_transition(
                         state_norm,
                         action_idx,
+                        action_masks,
                         reward,
                         next_state_norm,
                         next_action_idx,
+                        next_action_masks,
                     )
                 )
 
