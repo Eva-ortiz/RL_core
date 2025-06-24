@@ -582,7 +582,7 @@ class DRL_agent(agent):
             # change related to invalid action masking
             if action_masks is not None:
                 # q value of -inf for invalid actions
-                q_values[~action_masks] = -np.inf
+                q_values[~np.array(action_masks)] = -np.inf
 
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
