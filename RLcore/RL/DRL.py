@@ -615,7 +615,7 @@ class DRL_agent(agent):
         if epsilon > rand:
             # change related to invalid action masking
             valid_actions = (
-                np.where(action_masks)
+                np.where(action_masks)[0].astype(Action)
                 if action_masks is not None
                 else range(len(self.actions) - 1)
             )
