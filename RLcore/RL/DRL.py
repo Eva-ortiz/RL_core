@@ -684,6 +684,7 @@ class DRL_agent(agent):
         batch_size: int = 64,
         max_steps: int = np.inf,
         tol_loss: float = 0.0,
+        use_masking: bool = False,
         plot_learning_curves: bool = True,
         save_q_net: bool = True,
         **kwargs,
@@ -712,6 +713,9 @@ class DRL_agent(agent):
             By default, np.inf
         tol_loss : float, optional
             Tolerance to consider action values have converged. By default, 0.0
+        use_masking : bool, optional
+            Whether or not to use invalid action masks during training, by
+            default False.
         plot_learning_curves : bool, optional
             Select to plot learning curves or not. By default, True
         save_q_net : bool, optional
@@ -914,6 +918,7 @@ class DRL_agent(agent):
                 initial_batch_action,
                 follow_next_action,
                 decorrelated,
+                use_masking=use_masking,
                 reset_options=reset_options,
             )
             initial_batch_state_norm = last_batch_state_norm
@@ -966,6 +971,9 @@ class DRL_agent(agent):
                             experience.next_state_norm,
                             q_net=q_net,
                             device=device,
+                            action_masks=(
+                                experience.next_action_masks if use_masking else None
+                            ),
                         )
 
                     # update the target action values
