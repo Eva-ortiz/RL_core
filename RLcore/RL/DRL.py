@@ -349,8 +349,9 @@ class DRL_agent(agent):
         -------
         experiences : list[namedtuple]
             List which contains each one of the experiences, composed by
-            (state_norm, action_idx, reward, next_state_norm).
-            If follow_next_action, also include next_action_idx.
+            (state_norm, action_idx, action_masks, reward, next_state_norm).
+            If follow_next_action, also include next_action_idx and
+            next_action_masks.
         visited_states_norm : tuple[State_norm]
             Tuple of visited states (normalized).
         reached_states : tuple[State_norm]
