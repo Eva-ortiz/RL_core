@@ -971,9 +971,7 @@ class DRL_agent(agent):
                             experience.next_state_norm,
                             q_net=q_net,
                             device=device,
-                            action_masks=(
-                                experience.next_action_masks if use_masking else None
-                            ),
+                            action_masks=experience.next_action_masks,
                         )
 
                     # update the target action values
