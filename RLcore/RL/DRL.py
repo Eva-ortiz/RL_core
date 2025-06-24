@@ -523,6 +523,7 @@ class DRL_agent(agent):
         state_norm: State_norm,
         q_net: QNN,
         device: Literal["cuda", "mps", "cpu"],
+        action_masks: np.ndarray[bool] | None = None,
         **kwargs,
     ) -> tuple[int, float, str]:
         """Return the action that the agent takes given an state.
@@ -543,13 +544,13 @@ class DRL_agent(agent):
             state.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
+        action_masks : np.ndarray[bool] | None, optional
+            Action mask, by default None, so do not apply masking.
 
         **kwargs
             epsilon : float
                 Value of epsilon in epsilon greedy policy. With higher
                 epsilon, more exploratory behaviour of the policy.
-            action_masks : np.ndarray[bool]
-                Action mask, by default None, so do not apply masking.
 
         Returns
         -------
@@ -578,7 +579,6 @@ class DRL_agent(agent):
             )
 
             # change related to invalid action masking
-            action_masks = kwargs.get("action_masks")
             if action_masks is not None:
                 # q value of -inf for invalid actions
                 q_values[~action_masks] = -np.inf
