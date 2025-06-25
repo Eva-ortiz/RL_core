@@ -17,18 +17,25 @@ from sb3_contrib.common.maskable.utils import get_action_masks
 
 transition = namedtuple(
     "transition",
-    ("state_norm", "action_idx", "action_masks", "reward", "next_state_norm"),
+    (
+        "state_norm",
+        "action_masks",
+        "action_idx",
+        "reward",
+        "next_state_norm",
+        "next_action_masks",
+    ),
 )
 sarsa_transition = namedtuple(
     "transition",
     (
         "state_norm",
-        "action_idx",
         "action_masks",
+        "action_idx",
         "reward",
         "next_state_norm",
-        "next_action_idx",
         "next_action_masks",
+        "next_action_idx",
     ),
 )
 
@@ -349,9 +356,9 @@ class DRL_agent(agent):
         -------
         experiences : list[namedtuple]
             List which contains each one of the experiences, composed by
-            (state_norm, action_idx, action_masks, reward, next_state_norm).
-            If follow_next_action, also include next_action_idx and
-            next_action_masks.
+            (state_norm, action_masks, action_idx, reward, next_state_norm,
+            next_action_masks).
+            If follow_next_action, also include next_action_idx.
         visited_states_norm : tuple[State_norm]
             Tuple of visited states (normalized).
         reached_states : tuple[State_norm]
@@ -453,20 +460,24 @@ class DRL_agent(agent):
             # store reached states
             reached_states.add(tuple(next_state_norm))
 
+            # if action masking, check env action masks [1]
+            next_action_masks = get_action_masks(environment) if use_masking else None
+
             # store the transition
             if not follow_next_action:
                 experiences.append(
                     transition(
-                        state_norm, action_idx, action_masks, reward, next_state_norm
+                        state_norm,
+                        action_masks,
+                        action_idx,
+                        reward,
+                        next_state_norm,
+                        next_action_masks,
                     )
                 )
 
             # store sarsa transition if track_next_action is selected
             else:
-                # if action masking, check env action masks [1]
-                next_action_masks = (
-                    get_action_masks(environment) if use_masking else None
-                )
                 # perform next action too
                 next_action_idx, _, _ = self._act(
                     "epsilon_greedy",
@@ -481,12 +492,12 @@ class DRL_agent(agent):
                 experiences.append(
                     sarsa_transition(
                         state_norm,
-                        action_idx,
                         action_masks,
+                        action_idx,
                         reward,
                         next_state_norm,
-                        next_action_idx,
                         next_action_masks,
+                        next_action_idx,
                     )
                 )
 
