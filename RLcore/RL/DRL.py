@@ -1055,7 +1055,7 @@ class DRL_agent(agent):
         if save_q_net:  # [1]
             torch.save(
                 q_net.state_dict(),
-                f"./data/{self.save_folder}/q_net_{in_dim}_inputs.pt",
+                f"./{self.save_folder}/q_net_{in_dim}_inputs.pt",
             )
 
         # -------------------------------------------------------------------------
@@ -1087,7 +1087,7 @@ class DRL_agent(agent):
         )
 
         # load weights and biases
-        w_and_b = torch.load(f"./data/{save_folder}/q_net_{in_dim}_inputs.pt")
+        w_and_b = torch.load(f"./{save_folder}/q_net_{in_dim}_inputs.pt")
         # load weights and biases into created neural network object
         # employ `w_and_b` for the net before any operation to avoid consuming
         # the iterable
@@ -1683,7 +1683,7 @@ class DQN_agent(DRL_agent):
         if save_q_net:  # [1]
             torch.save(
                 q_net.state_dict(),
-                f"./data/{self.save_folder}/q_net_{in_dim}_inputs.pt",
+                f"./{self.save_folder}/q_net_{in_dim}_inputs.pt",
             )
 
         # -------------------------------------------------------------------------
