@@ -23,6 +23,7 @@ hidden_neur = 64
 batch_size = 32
 decorrelated = false
 step_count = true
+use_masking = true
 
 max_steps = 30000
 tol_loss = -inf
@@ -44,6 +45,7 @@ hidden_neur = 64
 batch_size = 32
 decorrelated = false
 step_count = true
+use_masking = true
 
 max_steps = 20000
 tol_loss = -inf
