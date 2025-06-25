@@ -8,6 +8,7 @@ import pandas as pd
 from typer import Typer
 from utils import load_conf
 
+# if number, must be native python dtypes (e.g., NOT numpy dtype)
 Action = int
 Reward = float
 State = pd.Series
