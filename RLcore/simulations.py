@@ -203,7 +203,7 @@ def approximated_simulation(
         train_env = env(**env_kwargs)
 
         # create the new agent with selected algorithm
-        agent = agent_class(
+        train_agent = agent_class(
             algorithm=algorithm,
             actions=list(train_env._action_name_dict.values()),
             save_folder=model_path,
@@ -212,7 +212,7 @@ def approximated_simulation(
             hidden_neur=cfg_hiperpar["hidden_neur"],
         )
 
-        agent.train(
+        train_agent.train(
             device=device,
             environment=train_env,
             plot_learning_curves=monitor_train,
@@ -229,14 +229,16 @@ def approximated_simulation(
         # print execution time of this problem
         timer(start_time, time.time())
 
-        logging.info(f"""Number of visited states: {len(agent.visited_states_norm)}""")
+        logging.info(
+            f"""Number of visited states: {len(train_agent.visited_states_norm)}"""
+        )
 
     # ------------- output relevant data -------------
     if greedy_eval:
         eval_env = env(**env_kwargs)
 
         # create the new agent with selected algorithm
-        agent = agent_class(
+        eval_agent = agent_class(
             algorithm=algorithm,
             actions=list(eval_env._action_name_dict.values()),
             save_folder=f"{algorithm}_results",
@@ -245,14 +247,14 @@ def approximated_simulation(
             hidden_neur=cfg_hiperpar["hidden_neur"],
         )
         # load its network
-        agent.load_net(
+        eval_agent.load_net(
             in_dim=eval_env.observation_space.shape[0],
             device=device,
             model_path=model_path,
         )
 
-        agent.greedy_simulation(
-            q_net=agent.q_net,
+        eval_agent.greedy_simulation(
+            q_net=eval_agent.q_net,
             env=eval_env,  # [3]
             max_steps=cfg_env["max_transitions"],
             device=device,
