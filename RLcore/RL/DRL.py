@@ -1034,6 +1034,7 @@ class DRL_agent(agent):
                     epsilon,
                     training_best_reward,
                     reset_options,
+                    use_masking,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
@@ -1143,6 +1144,7 @@ class DRL_agent(agent):
         epsilon: float | None = None,
         training_best_reward: float | None = None,
         reset_options: dict[str, Any] | None = None,
+        use_masking: bool = False,
     ):
         """Update selected reward curves in `reward_curve_mode` for each step.
 
@@ -1179,6 +1181,9 @@ class DRL_agent(agent):
         reset_options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset. By
             default, None.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks in greedy simulation, by
+            default False.
 
         Warnings
         --------
@@ -1210,6 +1215,7 @@ class DRL_agent(agent):
             max_steps=steps_per_point,
             device=device,
             reset_options=reset_options,
+            use_masking=use_masking,
         )
         for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
             if reward_curve_mode_ == "return":
@@ -1662,6 +1668,7 @@ class DQN_agent(DRL_agent):
                     epsilon,
                     training_best_reward,
                     reset_options,
+                    use_masking,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
