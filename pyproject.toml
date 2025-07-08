@@ -9,13 +9,17 @@ name = "RLcore"
 #version = "0.1.0"
 description = "Librería Python de ejemplo"
 readme = "README.md"
-authors = [{ name = "Komorebi AI", email = "info@komorebi.ai" }]
+authors = [{ name = "Eva Ortiz Mansilla" }]
 dynamic = ["version"]
 dependencies = [
     "pandas",
     "fastapi",
     "uvicorn",
     "typer-slim",
+    "gymnasium>=1.1.1",
+    "stable-baselines3>=2.6.0",
+    "sb3-contrib>=2.6.0",
+    "optuna>=4.3.0",
 ]
 
 [project.urls]
@@ -85,4 +89,5 @@ dev-dependencies = [
     "ipykernel",
 ]
 
-
+[tool.codespell]
+ignore-words = "codespell_ignore_words.txt"
