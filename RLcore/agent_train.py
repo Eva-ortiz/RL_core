@@ -215,7 +215,7 @@ def env_monitor_outputs(
         # each episode
         for var in episode_vars_nd_labels:
             episode_records[var] = call_method_or_attr_of_envs(
-                method_name=f"get_{var}", env_to_call=n_env
+                env=monitored_env, method_name=f"get_{var}", env_to_call=n_env
             )
             # assert all records have the same number of values
             assert len(episode_records[var]) == len(list(episode_records.values())[0])
