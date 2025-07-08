@@ -219,9 +219,14 @@ def approximated_simulation(
             )
 
         # create the new agent with selected algorithm
+        actions = (
+            train_env._action_buoyid_dict
+            if cfg_hiperpar["n_envs"] == 0
+            else train_env.get_attr("_action_buoyid_dict", indices=0)[0]
+        ).values()
         agent = agent_class(
             algorithm=algorithm,
-            actions=list(train_env._action_name_dict.values()),
+            actions=list(actions),
             save_folder=model_path,
             verbose=verbose,
             hidden_layers=cfg_hiperpar["hidden_layers"],
