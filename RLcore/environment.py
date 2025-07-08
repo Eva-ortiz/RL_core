@@ -5,6 +5,7 @@ from typing import Any, Literal
 import gymnasium as gym
 import numpy as np
 import pandas as pd
+from stable_baselines3.common.vec_env import VecEnv
 from typer import Typer
 from utils import load_conf
 
@@ -35,6 +36,71 @@ class Setup_mode(StrEnum):
 
     INIT = "init"
     RESET = "reset"
+
+
+def call_method_or_attr_of_envs(
+    env: gym.Env | VecEnv,
+    method_name: str | None,
+    attr_name: str | None,
+    *method_args: tuple | None,
+    env_to_call: list[int] | int | None = None,
+    **method_kwargs: dict | None,
+) -> tuple[list | None, list | None]:
+    """Call a method of envs inside an vectorized environment.
+
+    Also perform the call in case of a non vectorized environment.
+
+    Parameters
+    ----------
+    vecEnv : VecEnv
+        Vectorized environment.
+    method_name : str | None
+        The name of the environment method to invoke.
+    attr_name : str | None
+        The name of the environment attribute to invoke.
+    method_args : tuple | None
+        Any positional arguments to provide in the call.
+    method_kwargs : dict | None
+        Any keyword arguments to provide in the call.
+    env_to_call : list[int] | int | None, optional
+        Indices of envs whose method to call.
+
+    Returns
+    -------
+    list | None
+        List of items returned by the environment’s method call
+    list | None
+        List of values of ‘attr_name’ in all environments
+
+    References
+    ----------
+    .. [1] https://stable-baselines.readthedocs.io/en/master/guide/vec_envs.html#stable_baselines.common.vec_env.VecEnv.env_method
+    """
+    if isinstance(env, VecEnv):
+        method_return = (
+            env.env_method(
+                method_name,
+                method_args=method_args,
+                indices=env_to_call,
+                method_kwargs=method_kwargs,
+            )
+            if method_name is not None
+            else None
+        )
+        attr_return = (
+            env.get_attr(method_name, indices=env_to_call)
+            if attr_name is not None
+            else None
+        )
+    else:
+        method_return = (
+            getattr(env, method_name)(*method_args, **method_kwargs)
+            if method_name is not None
+            else None
+        )
+        attr_return = getattr(env, method_name) if attr_name is not None else None
+
+    return method_return, attr_return
 
 
 class ENV(gym.Env):  # type: ignore[type-arg]
