@@ -40,8 +40,8 @@ class Setup_mode(StrEnum):
 
 def call_method_or_attr_of_envs(
     env: gym.Env | VecEnv,
-    method_name: str | None,
-    attr_name: str | None,
+    method_name: str | None = None,
+    attr_name: str | None = None,
     *method_args: tuple | None,
     env_to_call: list[int] | int | None = None,
     **method_kwargs: dict | None,
@@ -54,9 +54,9 @@ def call_method_or_attr_of_envs(
     ----------
     vecEnv : VecEnv
         Vectorized environment.
-    method_name : str | None
+    method_name : str | None, optional
         The name of the environment method to invoke.
-    attr_name : str | None
+    attr_name : str | None, optional
         The name of the environment attribute to invoke.
     method_args : tuple | None
         Any positional arguments to provide in the call.
