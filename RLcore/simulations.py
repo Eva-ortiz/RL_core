@@ -8,6 +8,7 @@ import gymnasium as gym
 import torch
 from agent_predict import maskablePPO_episode
 from agent_train import maskablePPO_train
+from environment import call_method_or_attr_of_envs
 from global_vars import WORKING_DIR
 from RL.DRL import DQN_agent, DRL_agent  # noqa E402
 from sb3_contrib import MaskablePPO
@@ -220,9 +221,9 @@ def approximated_simulation(
 
         # create the new agent with selected algorithm
         actions = (
-            train_env._action_buoyid_dict
-            if cfg_hiperpar["n_envs"] == 0
-            else train_env.get_attr("_action_buoyid_dict", indices=0)[0]
+            call_method_or_attr_of_envs(
+                env=train_env, attr_name="_action_buoyid_dict", env_to_call=0
+            )[0]
         ).values()
         agent = agent_class(
             algorithm=algorithm,
