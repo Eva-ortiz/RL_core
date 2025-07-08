@@ -56,6 +56,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     .. [9] https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
     .. [10] https://www.gymlibrary.dev/content/environment_creation/#reset
     .. [11] https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
+
+    .. [12] https://github.com/Stable-Baselines-Team/stable-baselines3-contrib/issues/49
     """
 
     # relevant metadata storage
@@ -401,8 +403,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     def action_masks(self) -> list[bool]:
         """Invalid action masking [OPTIONAL BEHAVIOR].
 
-        Intended for Maskable PPO implementation of Stable Baselines3 - Contrib.
-        [9]
+        Intended for Maskable PPO implementation of Stable Baselines3 - Contrib
+        and now for our implementation of Sarsa, Deep Q-Learning and double Deep
+        Q-Learning algorithms.
+        [9, 12]
 
         Returns
         -------
