@@ -185,7 +185,7 @@ class DRL_agent(agent):
     def greedy_simulation(
         self,
         q_net: QNN,
-        env: ENV,
+        env: gym.Env,
         max_steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
@@ -197,7 +197,7 @@ class DRL_agent(agent):
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
-        env : ENV
+        env : gym.Env
             Environment object of the problem, reset to perform the simulation.
         max_steps : int
             Maximum number of steps of the simulation. If `end_episode` reached,
