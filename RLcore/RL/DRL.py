@@ -12,7 +12,15 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from basics import agent
-from environment import ENV, Action, Reward, Setup_mode, State, State_norm
+from environment import (
+    ENV,
+    Action,
+    Reward,
+    Setup_mode,
+    State,
+    State_norm,
+    call_method_or_attr_of_envs,
+)
 from plots import learning_curve, save_fig_df
 
 transition = namedtuple(
@@ -441,8 +449,10 @@ class DRL_agent(agent):
                 # Reset the environment setting start env/state to None and
                 # current env to a random state. In addition, reset some
                 # counters.
-                state_norm = environment._setup(
-                    mode=Setup_mode.INIT, start_env="random"
+                state_norm = call_method_or_attr_of_envs(
+                    env=environment,
+                    method_name="_setup",
+                    method_kwargs={"mode": Setup_mode.INIT, "start_env": "random"},
                 )
 
             # store visited states
