@@ -20,6 +20,12 @@ dependencies = [
     "stable-baselines3>=2.6.0",
     "sb3-contrib>=2.6.0",
     "optuna>=4.3.0",
+    "numpy>=2.2.5",
+    "typer>=0.15.3",
+    "torch>=2.7.0",
+    "matplotlib>=3.10.1",
+    "tables>=3.10.2",
+    "tomli>=2.2.1",
 ]
 
 [project.urls]
