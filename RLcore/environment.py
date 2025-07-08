@@ -42,9 +42,8 @@ def call_method_or_attr_of_envs(
     env: gym.Env | VecEnv,
     method_name: str | None = None,
     attr_name: str | None = None,
-    *method_args: tuple | None,
     env_to_call: list[int] | int | None = None,
-    **method_kwargs: dict | None,
+    **method_kwargs,
 ) -> tuple[list | None, list | None]:
     """Call a method of envs inside an vectorized environment.
 
@@ -58,8 +57,6 @@ def call_method_or_attr_of_envs(
         The name of the environment method to invoke.
     attr_name : str | None, optional
         The name of the environment attribute to invoke.
-    method_args : tuple | None
-        Any positional arguments to provide in the call.
     method_kwargs : dict | None
         Any keyword arguments to provide in the call.
     env_to_call : list[int] | int | None, optional
@@ -79,10 +76,7 @@ def call_method_or_attr_of_envs(
     if isinstance(env, VecEnv):
         method_return = (
             env.env_method(
-                method_name,
-                method_args=method_args,
-                indices=env_to_call,
-                method_kwargs=method_kwargs,
+                method_name=method_name, indices=env_to_call, **method_kwargs
             )
             if method_name is not None
             else None
@@ -94,7 +88,7 @@ def call_method_or_attr_of_envs(
         )
     else:
         method_return = [
-            getattr(env, method_name)(*method_args, **method_kwargs)
+            getattr(env, method_name)(**method_kwargs)
             if method_name is not None
             else None
         ]

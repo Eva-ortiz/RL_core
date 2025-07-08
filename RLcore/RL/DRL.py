@@ -453,7 +453,8 @@ class DRL_agent(agent):
                 state_norm = call_method_or_attr_of_envs(
                     env=environment,
                     method_name="_setup",
-                    method_kwargs={"mode": Setup_mode.INIT, "start_env": "random"},
+                    mode=Setup_mode.INIT,
+                    start_env="random",
                 )
 
             # store visited states
