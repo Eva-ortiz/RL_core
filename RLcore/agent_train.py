@@ -298,7 +298,7 @@ def maskablePPO_train(
         Trained agent.
     train_time : float
         Training time of the returned agent.
-    n_explored_routes : int
+    n_explored_episodes : int
         Number of episodes explored by the environment during training.
     optuna_time : float | None
         Time of hyperparameter optimization.
@@ -506,8 +506,13 @@ def maskablePPO_train(
     agent.save(f"{path_out}/{path_out.stem}")
 
     if monitor_train:
-        n_explored_routes = env_monitor_outputs(monitored_env, env, path_out, verbose)
+        n_explored_episodes = env_monitor_outputs(monitored_env, env, path_out, verbose)
         agent_training_outputs(learn_outputs, agent, path_out)
 
     monitored_env.close()
-    return agent, train_time(), n_explored_routes, optuna_time() if params2opt else None
+    return (
+        agent,
+        train_time(),
+        n_explored_episodes,
+        optuna_time() if params2opt else None,
+    )

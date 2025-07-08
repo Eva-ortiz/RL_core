@@ -9,7 +9,7 @@ name = "RLcore"
 #version = "0.1.0"
 description = "Librería Python de ejemplo"
 readme = "README.md"
-authors = [{ name = "Komorebi AI", email = "info@komorebi.ai" }]
+authors = [{ name = "Eva Ortiz Mansilla" }]
 dynamic = ["version"]
 dependencies = [
     "pandas",
