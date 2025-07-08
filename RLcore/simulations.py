@@ -11,6 +11,8 @@ from agent_train import maskablePPO_train
 from global_vars import WORKING_DIR
 from RL.DRL import DQN_agent, DRL_agent  # noqa E402
 from sb3_contrib import MaskablePPO
+from sb3_custom.common.env_util import make_vec_env_custom
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from utils import load_conf, set_logging, timer
 
 # for HPC, specify the path to import from our modules
@@ -199,8 +201,22 @@ def approximated_simulation(
         # store start time of the program
         start_time = time.time()
 
-        # create the RHT environment
-        train_env = env(**env_kwargs)
+        # wrap and initialize the environment
+        if cfg_hiperpar["n_envs"] == 0:
+            # ... to be monitored
+            train_env = env(**env_kwargs)
+
+        else:
+            # ...to be vectorized and monitored
+            train_env = make_vec_env_custom(
+                env,
+                env_kwargs=env_kwargs,
+                seed=seed,
+                n_envs=cfg_hiperpar["n_envs"],
+                vec_env_cls=SubprocVecEnv
+                if cfg_hiperpar["env_multiprocess"]
+                else DummyVecEnv,
+            )
 
         # create the new agent with selected algorithm
         agent = agent_class(
