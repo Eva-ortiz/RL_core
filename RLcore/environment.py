@@ -1,6 +1,6 @@
 import logging
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 import gymnasium as gym
 import numpy as np
@@ -55,6 +55,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
     .. [9] https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
     .. [10] https://www.gymlibrary.dev/content/environment_creation/#reset
+    .. [11] https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
     """
 
     # relevant metadata storage
@@ -63,7 +64,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     def __init__(
         self,
         action_names: np.typing.ArrayLike,
-        start_env: Environment | None = None,
+        start_env: Environment | Literal["random"] = "random",
         env_idx: int | None = None,
         conf_path: str = "./config.toml",
     ) -> None:
@@ -73,10 +74,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         ----------
         action_names : np.typing.ArrayLike
             Set of action names that can be performed.
-        start_env : Environment | None, optional
-            Information about the starting point of the environment. If None
+        start_env : Environment | Literal["random"], optional
+            Information about the starting point of the environment. If "random"
             instead of pd.Series, pick a random starting point.
-            By default, None.
+            By default, "random".
         env_idx : int | None, optional
             Index of environment. Useful to keep track of logging of each
             environment when vectorized environments are used. If None, do not
@@ -99,8 +100,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self.action_col = "TODO : str"
         self.state_col_1, self.state_col_2 = "TODO : str", "TODO : str"
 
-        # WARNING: `self.state_cols` order is important for the remaining
-        # pipeline
+        # WARNING: `self.state_cols` order is VERY VERY VERY important for the
+        # remaining pipeline
         self.state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
         self.env_cols = self.state_cols + ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
 
@@ -136,7 +137,12 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         """Translate action name to the idx of the action space."""
         return list(self._action_name_dict.values()).index(action_name)
 
-    def _setup(self, start_env: Environment | None, mode: Setup_mode) -> State_norm:
+    def _setup(
+        self,
+        mode: Setup_mode,
+        start_env: Environment | Literal["random"] = None,
+        current_env: Environment | None = None,
+    ) -> State_norm:
         """Initialize the environment with init and reset methods.
 
         Initialize some counters, store current and initial environment and
@@ -144,12 +150,21 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         Parameters
         ----------
-        start_env : Environment | None
-            Indicate starting environment.
-                * For "INIT" mode, `start_env`
-                * For "RESET" mode, `self.init_env`
         mode : Setup_mode
             Select to proceed for `init` or `reset` method.
+        start_env : Environment | Literal["random"], optional
+            Indicate starting environment.
+            Only necessary in "INIT" mode, where init env and state are defined.
+            If "RESET", current env and state will return to init values.
+        current_env : : Environment | None, optional
+            Set the environment to arbitrary `current_env`. Useful when we want
+            to preserve initial env/state defs, but want to allocate the agent
+            into an specific environment state, different from the initial.
+
+        Warnings
+        --------
+        * We skip the possibility of randomly setting current env/state as a
+          terminal state to avoid buggy behaviours.
         """
         # initilaize the counter for the number of transitions of the
         # environment
@@ -161,49 +176,62 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # store and initialize the information about the current environment,
         # relevant for the network training and for storing the step of the
         # environment in a dictionary
-        if start_env is None:
-            # if INIT mode...
-            if mode == Setup_mode.INIT:
+        if mode == Setup_mode.INIT:
+            # not valid input
+            if start_env is None:
+                raise ValueError(
+                    "`start_env` must be provided to define initial env and state"
+                )
+            # random start env
+            elif start_env == "random":
                 # set both initial state and env as None due to its randomness
                 self.init_env, self.init_state = None, None
-            # elif RESET mode...
-            elif mode == Setup_mode.RESET:
-                # check `init_state` is None together with `init_env`
-                assert (
-                    self.init_state is None
-                ), "`init_env` and `init_state` must be both None."
-
-            # define a random environment state
-            self.current_env = self._random_env_state()
-            # compute norm_current_state for later return
-            norm_current_state = self._normalize_state_values(
-                self.current_env[self.state_cols]
-            )
-
-        else:
-            assert set(start_env.index).issubset(
-                set(self.env_cols)
-            ), f"`start_env` must have {self.env_cols} environment fields."
-
-            # if INIT mode...
-            if mode == Setup_mode.INIT:
-                # additionally define the initial environment
+            # input start env
+            else:
+                if not set(start_env.index).issubset(set(self.env_cols)):
+                    raise ValueError(
+                        f"`start_env` must contain {self.env_cols} environment fields."
+                    )
+                # define the initial environment
                 self.init_env = start_env
                 # and the initial state
                 self.init_state = self._normalize_state_values(
                     start_env[self.state_cols]
                 )
-            # elif RESET mode...
-            elif mode == Setup_mode.RESET:
-                # check `init_state` is NOT None together with `init_env`
-                assert (
-                    self.init_state is not None
-                ), "`init_env` and `init_state` must be no one None."
 
+        # set current environment to that specified, ignoring `init_env` and
+        # `init_state` info
+        if current_env is not None:
+            if not set(current_env.index).issubset(set(self.env_cols)):
+                raise ValueError(
+                    f"`current_env` must contain {self.env_cols} environment fields."
+                )
+            self.current_env = current_env
+            # compute norm_state for later return
+            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
+
+        # in randomly initialized environment, `init_state` is None together
+        # with `init_env`
+        elif self.init_env is None and self.init_state is None:
+            # define a random current environment state
+            current_env = self._random_env_state()
+            while self._termination(current_env[self.state_cols]):
+                current_env = self._random_env_state()
+            self.current_env = current_env
+            # compute norm_state for later return
+            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
+
+        # in static initial env, `init_state` is NOT None together with `init_env`
+        elif self.init_env is not None and self.init_state is not None:
             # set current environment as start environment
-            self.current_env = start_env.copy(deep=True)
-            # define norm_current_state for later return
-            norm_current_state = self.init_state
+            self.current_env = self.init_env.copy(deep=True)
+            # define norm_state for later return
+            norm_state = self.init_state
+
+        else:
+            raise AssertionError(
+                "Start environment and state are inconsistently defined."
+            )
 
         # initialize visited actions memory
         # CAUTION: initial action must be added to memory as it will be always
@@ -212,7 +240,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self._visited_actions_memory = {
             self.action_name_to_idx(self.current_env[self.action_col])
         }
-        return norm_current_state
+        return norm_state
 
     def step(
         self, action: Action
@@ -222,7 +250,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         Parameters
         ----------
         action : Action
-            [MANDATORY INPUT] Input action.
+            Input action index.
             Correspondence between idx representation of the action and action
             name is given by `_action_name_dict` attribute.
 
@@ -309,7 +337,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     def reset(
         self, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[State_norm, dict[str, Any]]:
-        """Reset the environment to an initial state [5].
+        """Reset the environment to an initial state [5, 11].
 
         Required before calling step and when episode is terminated or
         truncated. This is managed by StableBaselines3, if used [8,9].
@@ -319,14 +347,15 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         seed : int | None, optional
             [MANDATORY INPUT] The seed that is used to initialize the
             environment's PRNG (np_random).
-            If the environment does not already have a PRNG and seed=None (the
+            * If the environment does not already have a PRNG and seed=None (the
             default option) is passed, a seed will be chosen from some source of
-            entropy (e.g. timestamp or /dev/urandom). However, if the
-            environment already has a PRNG and seed=None is passed, the PRNG
-            will not be reset. If you pass an integer, the PRNG will be reset
-            even if it already exists.
+            entropy (e.g. timestamp or /dev/urandom).
+            * However, if the environment already has a PRNG and seed=None is
+            passed, the PRNG will not be reset.
+            * If you pass an integer, the PRNG will be reset even if it already
+            exists.
             Usually, you want to pass an integer right after the environment has
-            been initialized and then never again. [5]
+            been initialized and then never again. [5, 10]
             By default, None.
         options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset
@@ -349,7 +378,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         # initialize some counters, store current and initial environment and
         # state info, and initialize visited actions memory
-        norm_current_state = self._setup(start_env=self.init_env, mode=Setup_mode.RESET)
+        norm_current_state = self._setup(mode=Setup_mode.RESET)
 
         return norm_current_state, info
 
@@ -406,21 +435,21 @@ class ENV(gym.Env):  # type: ignore[type-arg]
           initializes environment's PRNG. [10]
         """
         # generate random numbers
-        random_n = self.np_random.random(size=len(self.state_cols))
+        random_n = self.np_random.random(size=len(self.env_cols))
 
         # get a random value between min and max vals
         min_val, max_val = "TODO : float", "TODO : float"  # [4 EXAMPLE]
-        rand_values = (max_val - min_val) * random_n + min_val
+        rand_values = (max_val - min_val) * random_n + min_val  # [4 EXAMPLE]
 
-        state = pd.Series(
-            {self.state_cols[idx]: val for idx, val in enumerate(rand_values)}
+        env = pd.Series(
+            {self.env_cols[idx]: val for idx, val in enumerate(rand_values)}
         )
 
         # remember: defined state must contain `state_cols`
-        assert set(self.state_cols) == set(
-            state.index
-        ), f"`state` must be composed of {self.state_cols} state fields."
-        return state
+        assert set(self.env_cols) == set(
+            env.index
+        ), f"Environment must be composed of {self.env_cols} fields."
+        return env
 
     def _normalize_state_values(self, state: State) -> State_norm:
         """Normalize each one of the state variables.
@@ -464,6 +493,31 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             2 * np.pi * state[self.state_col_2] / periodicity_var_2
         )
         return norm_state
+
+    def _termination(self, state: State) -> bool:
+        """Return a flag indicating if termination has been reached.
+
+        Parameters
+        ----------
+        state : State
+            State to check if it is a terminal state.
+
+        Returns
+        -------
+        bool
+            True if terminal state, false otherwise.
+        """
+        # if more than one termination condition [4 EXAMPLE]
+        if (
+            self.termination_condition == "TODO : StrEnum"
+            or self.termination_condition == "TODO : StrEnum"
+        ):
+            terminated = "TODO : boolean comparison with state input (e.g.)"
+        else:
+            raise NotImplementedError(
+                f"{self.termination_condition} termination not implemented."
+            )
+        return terminated
 
 
 @app.command()

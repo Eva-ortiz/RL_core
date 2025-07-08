@@ -5,11 +5,13 @@ from numbers import Number
 from pathlib import Path
 from typing import Literal
 
-from src.utils import exists, load_conf
+import numpy as np
+from environment import State_norm
+from utils import load_conf
 
 
 class environment(ABC):
-    """Basic environment class."""
+    """OUTDATED. Basic environment class."""
 
     def __init__(
         self, cfg_path: Path = Path("./RLcore/config.toml"), seed: int | None = None
@@ -25,8 +27,8 @@ class environment(ABC):
 
         terminal_state : Optional[Union[str, Iterable, Number]], optional
             Terminal state for an episode of the environment, if necessary.
-        n_episode_steps : Optional[int], optional
-            Number of steps which defines an episode, if necessary.
+        max_episode_steps : Optional[int], optional
+            Maximum number of steps which defines an episode, if necessary.
         episode_count : int, optional
             Count of the steps taken in the episode, if necessary.
 
@@ -35,14 +37,14 @@ class environment(ABC):
         """
         self.cfg = load_conf(cfg_path)
         # fix seed if indicated
-        if exists(seed):
+        if seed is not None:
             random.seed(seed)
 
         self.state_space = None
         self.start_state = None
 
         self.terminal_state = None
-        self.n_episode_steps = None
+        self.max_episode_steps = None
 
         # initialize episode count
         self.episode_count = 0
@@ -98,7 +100,8 @@ class agent(ABC):
     def __init__(
         self,
         algorithm: str,
-        actions: Iterable[str, Number],
+        actions: np.typing.ArrayLike,
+        seed: int | None = None,
         verbose: bool = True,
         **kwargs,
     ):
@@ -108,9 +111,11 @@ class agent(ABC):
         ----------
         algorithm : str
             Determine the RL algorithm to use.
-        actions : Iterable[str, Number]
+        actions : np.typing.ArrayLike
             Set of all possible actions the agent can make in the problem of
             study.
+        seed : int | None, optional
+            Seed for the pseudo random generators
         verbose : bool, optional
             Output info along the code. By default, True.
 
@@ -122,8 +127,16 @@ class agent(ABC):
             init_action_values : pd.DataFrame
                 Storage of action values for all states and actions, i.e.,
                 Q-table.
+
+        See Also
+        --------
+        Stable-Baselines3 BaseAlgorithm
+            Great reference for a BaseAlgorithm.
         """
         self.verbose = verbose
+        self.seed = seed
+        self.random_rng = random.Random(seed)
+
         self.algorithm = algorithm
         self.actions = actions
 
@@ -131,7 +144,7 @@ class agent(ABC):
     def _act(
         self,
         mode: Literal["greedy", "epsilon_greedy"],
-        state: str | Iterable | Number,
+        norm_state: State_norm,
         **kwargs,
     ) -> tuple[str | Number, Number]:
         """Return the action that the agent takes given an state.
@@ -142,8 +155,8 @@ class agent(ABC):
         ----------
         mode : Literal["greedy", "epsilon_greedy"]
             Mode of acting.
-        state : Union[str, Iterable, Number]
-            Current state of the agent.
+        state : State_norm
+            Normalized current state of the agent.
         **kwargs :
                 epsilon : float
                     Value of epsilon in epsilon greedy policy. With higher

@@ -4,85 +4,47 @@ debug_counter = 1000
 
 # ----------- environment generic config -----------
 [environment]
-max_transitions = 500
+max_transitions = 50
 
-[environment.reward]
-
-# ----------- RHT generic config -----------
-[RHT.environment]
-materials = [0, 1]
-gap_nm = 10
-layer_width_nm = 5
-
-n_layers = 16
-
-n_episode_steps = 64
-start_state = "zeros" # + info: `environment.__init__`
-
-htc_path = "./data/HTC"
-reward_def = "htc_delta"
-ref_state_label = "1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1" # only necessary if `reward_def` is `htc_delta`
-reward_reduction_factor = 1e5
-
-[RHT.plots]
-reward_curve_mode = ["last_reward", "return", "best_reward", "best_htc"]
+[environment.plots]
+reward_curve_mode = ["last_reward", "return", "best_reward"]
 reward_curve_steps_per_point = 64 # "None" to avoid DRL reward curves
 epsilon = true # epsilon curve
 lr = false # lr curve
 
-# ----------- dummy algorithm config -----------
-[dummy]
-generic_save_folder = "dummy"
-saving_frequency = 10000
-
-# ----------- RL algorithms and dummy simulation config -----------
-[apprx_nd_dummy]
-generic_save_folder = "apprx_nd_dummy"
+[environment.reward]
 
 # ----------- Approximated Sarsa algorithm config -----------
-[DRL.Sarsa]
-min_eps = 0.001
-min_lr = 0.0
-
-# RHT DRL Sarsa config
-[DRL.Sarsa.RHT]
-generic_save_folder = "DRL/RHT_Sarsa"
-
-[DRL.Sarsa.RHT.hiperparams]
+[DRL.Sarsa.hiperparams]
 hidden_layers = 4
 hidden_neur = 64
+
+[DRL.Sarsa.hiperparams.train]
 batch_size = 32
 decorrelated = false
 step_count = true
 
-episode_start_state = "initial" # + info: DRL_agent.train kwargs
 max_steps = 30000
 tol_loss = -inf
 
 epsilon = 1
 reduce_eps = 4e-5
+min_eps = 0.001
 lr = 1e-3
 reduce_perc_lr = 0.0
+min_lr = 0.0
 discount_rate = 0.99
 
 # ----------- Approximated double Q-learning algorithm config -----------
-[DRL.double_Q-learning]
-min_eps = 0.001
-min_lr = 0.0
-
-# RHT DRL double Q-learning config
-[DRL.double_Q-learning.RHT]
-generic_save_folder = "DRL/RHT_double_Q-learning"
-
-# specific RHT DRL double Q-learning config
-[DRL.double_Q-learning.RHT.hiperparams]
+[DRL.double_Q-learning.hiperparams]
 hidden_layers = 4
 hidden_neur = 64
+
+[DRL.double_Q-learning.hiperparams.train]
 batch_size = 32
 decorrelated = false
 step_count = true
 
-episode_start_state = "initial" # + info: DRL_agent.train kwargs
 max_steps = 20000
 tol_loss = -inf
 
@@ -94,8 +56,10 @@ n_steps_for_target_net_update = 5000
 
 epsilon = 1
 reduce_eps = 9e-5
+min_eps = 0.001
 lr = 1e-4
 reduce_perc_lr = 0.0
+min_lr = 0.0
 discount_rate = 0.99
 
 # ----------- Proximal Policy Optimization algorithm config -----------
