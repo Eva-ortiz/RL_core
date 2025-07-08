@@ -7,7 +7,7 @@ debug_counter = 1000
 max_transitions = 50
 
 [environment.plots]
-reward_curve_mode = ["last_reward", "return", "best_reward"]
+reward_curve_mode = ["greedy_last_reward", "greedy_return", "best_reward"]
 reward_curve_steps_per_point = 64 # "None" to avoid DRL reward curves
 epsilon = true # epsilon curve
 lr = false # lr curve
@@ -23,6 +23,7 @@ hidden_neur = 64
 batch_size = 32
 decorrelated = false
 step_count = true
+use_masking = true
 
 max_steps = 30000
 tol_loss = -inf
@@ -44,6 +45,7 @@ hidden_neur = 64
 batch_size = 32
 decorrelated = false
 step_count = true
+use_masking = true
 
 max_steps = 20000
 tol_loss = -inf
