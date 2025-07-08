@@ -22,6 +22,7 @@ from environment import (
     call_method_or_attr_of_envs,
 )
 from plots import learning_curve, save_fig_df
+from stable_baselines3.common.vec_env import VecEnv
 
 transition = namedtuple(
     "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
@@ -890,13 +891,15 @@ class DRL_agent(agent):
         # store visited states
         visited_states_norm = set()
 
-        # obtain episode start with reset method
-        env_norm_start_state, _ = environment.reset(
-            seed=self.seed, options=reset_options
-        )
-
-        # initialize batch state
-        initial_batch_state_norm = env_norm_start_state
+        # obtain episode start with reset method [2]
+        if isinstance(environment, VecEnv):
+            environment.seed(seed=self.seed)
+            environment.set_options(options=reset_options)
+            initial_batch_state_norm = environment.reset()
+        else:
+            initial_batch_state_norm, _ = environment.reset(
+                seed=self.seed, options=reset_options
+            )
 
         # select to store a' only for Sarsa algorithm
         follow_next_action = self.algorithm == "Sarsa"
@@ -1457,7 +1460,7 @@ class DQN_agent(DRL_agent):
         debug_counter = kwargs.get("debug_counter", 1)
 
         decorrelated = kwargs.get("decorrelated", False)
-        reset_options = kwargs.get("reset_options", False)
+        reset_options = kwargs.get("reset_options")
 
         # basic checks of input values
         self._check_train_inputs(
@@ -1474,13 +1477,15 @@ class DQN_agent(DRL_agent):
                 'target network' or 'double'."""
             )
 
-        # obtain episode start with reset method
-        env_norm_start_state, _ = environment.reset(
-            seed=self.seed, options=reset_options
-        )
-
-        # initialize batch state
-        initial_batch_state = env_norm_start_state
+        # obtain episode start with reset method [2]
+        if isinstance(environment, VecEnv):
+            environment.seed(seed=self.seed)
+            environment.set_options(options=reset_options)
+            initial_batch_state_norm = environment.reset()
+        else:
+            initial_batch_state_norm, _ = environment.reset(
+                seed=self.seed, options=reset_options
+            )
 
         # -------------------------------------------------------------------------
         # Step 0: define the NN of the Q function
@@ -1533,7 +1538,7 @@ class DQN_agent(DRL_agent):
             environment=environment,
             device=device,
             epsilon=epsilon,
-            initial_state=initial_batch_state,
+            initial_state=initial_batch_state_norm,
             initial_action=None,
             follow_next_action=False,
             decorrelated=decorrelated,
