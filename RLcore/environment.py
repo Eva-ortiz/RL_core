@@ -55,6 +55,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
     .. [9] https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
     .. [10] https://www.gymlibrary.dev/content/environment_creation/#reset
+    .. [11] https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
     """
 
     # relevant metadata storage
@@ -99,8 +100,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self.action_col = "TODO : str"
         self.state_col_1, self.state_col_2 = "TODO : str", "TODO : str"
 
-        # WARNING: `self.state_cols` order is important for the remaining
-        # pipeline
+        # WARNING: `self.state_cols` order is VERY VERY VERY important for the
+        # remaining pipeline
         self.state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
         self.env_cols = self.state_cols + ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
 
@@ -336,7 +337,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     def reset(
         self, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[State_norm, dict[str, Any]]:
-        """Reset the environment to an initial state [5].
+        """Reset the environment to an initial state [5, 11].
 
         Required before calling step and when episode is terminated or
         truncated. This is managed by StableBaselines3, if used [8,9].
@@ -346,14 +347,15 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         seed : int | None, optional
             [MANDATORY INPUT] The seed that is used to initialize the
             environment's PRNG (np_random).
-            If the environment does not already have a PRNG and seed=None (the
+            * If the environment does not already have a PRNG and seed=None (the
             default option) is passed, a seed will be chosen from some source of
-            entropy (e.g. timestamp or /dev/urandom). However, if the
-            environment already has a PRNG and seed=None is passed, the PRNG
-            will not be reset. If you pass an integer, the PRNG will be reset
-            even if it already exists.
+            entropy (e.g. timestamp or /dev/urandom).
+            * However, if the environment already has a PRNG and seed=None is
+            passed, the PRNG will not be reset.
+            * If you pass an integer, the PRNG will be reset even if it already
+            exists.
             Usually, you want to pass an integer right after the environment has
-            been initialized and then never again. [5]
+            been initialized and then never again. [5, 10]
             By default, None.
         options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset
