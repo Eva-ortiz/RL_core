@@ -93,12 +93,12 @@ def call_method_or_attr_of_envs(
             else None
         )
     else:
-        method_return = (
+        method_return = [
             getattr(env, method_name)(*method_args, **method_kwargs)
             if method_name is not None
             else None
-        )
-        attr_return = getattr(env, method_name) if attr_name is not None else None
+        ]
+        attr_return = [getattr(env, method_name) if attr_name is not None else None]
 
     return method_return, attr_return
 
