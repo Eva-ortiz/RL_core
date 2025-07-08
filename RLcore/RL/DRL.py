@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import Any, Literal
 
 import gymnasium as gym
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from basics import agent
 from environment import ENV, Action, Reward, Setup_mode, State, State_norm
-from plots import learning_curve
+from plots import learning_curve, save_fig_df
 from sb3_contrib.common.maskable.utils import get_action_masks
 
 transition = namedtuple(
@@ -52,7 +53,7 @@ class ReplayMemory:
     """
 
     def __init__(self, capacity, agent, **kwargs):
-        experiences, self.visited_states_norm, self.reached_states, _, _ = (
+        experiences, self.visited_states_norm, self.reached_states, _, _, _, _ = (
             agent._experience_generation(**kwargs)
         )
         self.memory = deque(experiences, maxlen=capacity)
@@ -65,7 +66,7 @@ class ReplayMemory:
         """
         for experience in experiences:
             self.memory.append(experience)
-            self.visited_states_norm.add(experience.state_norm)
+            self.visited_states_norm.add(tuple(experience.state_norm))
 
     def sample(self, batch_size, random_rng):
         """Sample `batch_size` stored experiences.
@@ -232,15 +233,16 @@ class DRL_agent(agent):
         -------
         overall_return : float
             Value of the return for the greedy simulation.
-        last_reward : Reward
-            Value of the last reward of the simulation.
         best_reward : Reward
             Value of the best reward seen during the simulation.
-        last_state_norm : State_norm
-            Last visited state (normalized). Useful to continue the trajectory
-            of (s, a, r, s') generated.
-        last_action : str
-            Label of the last action performed. For informative purposes.
+        episode_actions_labels : deque[str]
+            Labels of actions performed along greedy episode.
+        episode_states : deque[State]
+            States transitioned to during greedy episode.
+        episode_rewards : deque[Reward]
+            Rewards obtained from transitions along the greedy episode.
+        info_list : list[dict[str, Any]]
+            Additional information about taken steps.
 
         Warnings
         --------
@@ -262,6 +264,12 @@ class DRL_agent(agent):
         # reset the environment for this simulation and select start state
         state_norm, _ = env.reset(seed=self.seed, options=reset_options)
 
+        # initialize storage of further environment components and rewards
+        episode_actions_labels = deque([None])
+        episode_states = deque([env.current_env[env.state_cols]])
+        episode_rewards = deque([None])
+        info_list = []
+
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
             # if action masking, check env action masks
@@ -278,7 +286,7 @@ class DRL_agent(agent):
             )
 
             # observe response of the environment
-            state_norm, reward, terminated, truncated, _ = env.step(action_idx)
+            state_norm, reward, terminated, truncated, info = env.step(action_idx)
 
             # store best reward of the simulation
             if reward > best_reward:
@@ -286,6 +294,14 @@ class DRL_agent(agent):
 
             # store the return of the simulation
             overall_return += reward
+
+            # store taken actions labels, transitioned to states and obtained rewards
+            episode_actions_labels.append(action_label)
+            episode_states.append(env.current_env[env.state_cols])
+            episode_rewards.append(reward)
+
+            # store step info
+            info_list.append(info)
 
             if terminated or truncated:
                 reason_str = "TERMINATED" if terminated else "TRUNCATED"
@@ -299,7 +315,14 @@ class DRL_agent(agent):
 
         # output the return, last reward value, best reward value and last state
         # (normalized) and last action label
-        return overall_return, reward, best_reward, state_norm, action_label
+        return (
+            overall_return,
+            best_reward,
+            episode_actions_labels,
+            episode_states,
+            episode_rewards,
+            info_list,
+        )
 
     def _experience_generation(
         self,
@@ -320,6 +343,8 @@ class DRL_agent(agent):
         tuple[State_norm],
         State_norm,
         Action | None,
+        int,
+        dict[str, Any],
     ]:
         """Generate experiences consisting of states, actions and rewards.
 
@@ -359,6 +384,10 @@ class DRL_agent(agent):
             reset_options : dict, optional
                 Additional information to specify how the environment is reset
                 (depending on the specific environment). By default, None.
+            episode_length : int
+                Track of episode length, useful when input environment has
+                already taken few steps but did not reach a terminal state.
+                If not provided, it is assumed to be 0.
 
         Returns
         -------
@@ -378,6 +407,13 @@ class DRL_agent(agent):
         last_next_action : Action | None
             Last action a' performed. Useful to continue the sequence of
             generated experiences.
+        episode_length : int
+            Current track of episode length, useful to continue from last
+            unfinished episode, this is, from last next_state.
+        info : dict[str, Any]
+            Additional info about experience generation, such as,
+                * episodes longitude: if decorrelated samples, it will always be
+                    0 as episode length can not be tracked.
 
         Warnings
         --------
@@ -429,9 +465,11 @@ class DRL_agent(agent):
         experiences = []
         visited_states_norm = set()
         reached_states = set()
+        info = {"episode_lengths": tuple()}
 
         # TODO : obtain actions with vectorized environments, for ref see
         # MaskablePPO.collect_rollouts
+        episode_length = kwargs.get("episode_length", 0)
         for _ in range(n_experiences):
             # if decorrelated selected, randomly select next state and set the
             # environment to this state
@@ -465,6 +503,8 @@ class DRL_agent(agent):
             next_state_norm, reward, terminated, truncated, _ = environment.step(
                 action_idx
             )
+            # add an step to episode length if not decorrelated samples
+            episode_length += 1 if not decorrelated else 0
             # store reached states
             reached_states.add(tuple(next_state_norm))
 
@@ -516,6 +556,11 @@ class DRL_agent(agent):
                 else (next_state_norm, _)
             )
 
+            # check the end of the episode also for episode length track
+            if terminated or truncated:
+                info["episode_lengths"] += (episode_length,)
+                episode_length = 0
+
             # If follow_next_action is selected, force reset action to None if
             # terminated or truncated has been reached. Otherwise, set action to
             # next_action.
@@ -535,6 +580,8 @@ class DRL_agent(agent):
             reached_states,
             state_norm,
             action_idx,
+            episode_length,
+            info,
         )
 
     def _act(
@@ -688,10 +735,14 @@ class DRL_agent(agent):
                 `reward_curve_steps_per_point` must be other than None.""",
                 stacklevel=1,
             )
-        if not set(reward_curve_mode) <= {"return", "last_reward", "best_reward"}:
+        if not set(reward_curve_mode) <= {
+            "greedy_return",
+            "greedy_last_reward",
+            "best_reward",
+        }:
             raise ValueError(
-                """Invalid reward curve mode. Please, select 'return',
-                'last_reward' or 'best_reward'."""
+                """Invalid reward curve mode. Please, select 'greedy_return',
+                'greedy_last_reward' or 'best_reward'."""
             )
 
     def train(
@@ -757,13 +808,13 @@ class DRL_agent(agent):
 
             reward_curve_mode : list[str], optional
                 List with the selection of the rewards to record at `reward_curve`:
-                    * return : plot the return of the start state for each
-                        simulation.
-                    * last_reward : plot the reward of the last step of each
-                        simulation.
+                    * greedy_return : plot the return of the start state for
+                        each greedy simulation.
+                    * greedy_last_reward : plot the reward of the last step of
+                        each greedy simulation.
                     * best_reward : plot the best reward seen during all the
-                      training.
-                By default, ["return", "last_reward", "best_reward"]
+                        training.
+                By default, ["greedy_return", "greedy_last_reward", "best_reward"]
             reward_curve_steps_per_point : Optional[int], optional
                 Select the number of steps for each one of the simulated
                 episodes created to plot each point of the reward curve.
@@ -826,7 +877,7 @@ class DRL_agent(agent):
         min_lr = kwargs.get("min_lr", 0.0)
 
         reward_curve_mode = kwargs.get(
-            "reward_curve_mode", ["return", "last_reward", "best_reward"]
+            "reward_curve_mode", ["greedy_return", "greedy_last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
         debug_counter = kwargs.get("debug_counter", 1)
@@ -875,14 +926,17 @@ class DRL_agent(agent):
         # Step 1: perform the training of the system
         # -------------------------------------------------------------------------
         # ------ INITIALIZATION ------
-        # initialize epsilon, amount of loss and storage of best reward seen
-        # along all the training
+        # initialize step count, amount of loss, storage of best reward seen
+        # along all the training and episode length track
         step = 1
         loss = np.inf
         training_best_reward = -np.inf
+        episode_length = 0
 
         # initialize learning curves
         loss_curve = learning_curve()
+        mean_ep_len_curve = learning_curve()
+        episode_lengths_tuple = tuple()
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -928,6 +982,8 @@ class DRL_agent(agent):
                 _,
                 last_batch_state_norm,
                 last_batch_action,
+                last_episode_length,
+                experiences_info,
             ) = self._experience_generation(
                 batch_size,
                 q_net,
@@ -940,13 +996,18 @@ class DRL_agent(agent):
                 decorrelated,
                 use_masking=use_masking,
                 reset_options=reset_options,
+                episode_length=episode_length,
             )
             initial_batch_state_norm = last_batch_state_norm
             initial_batch_action = last_batch_action
+            episode_length = last_episode_length
 
             # store unique visited states with the usage of set
             for state_norm in batch_visited_states_norm:
                 visited_states_norm.add(tuple(state_norm))
+
+            # store full list of episode lengths
+            episode_lengths_tuple += experiences_info["episode_lengths"]
 
             # -------------------------------------------------------------------------
             # Step 1.2: use the batch experiences to get several pairs
@@ -1020,6 +1081,14 @@ class DRL_agent(agent):
             # update loss curve
             loss_curve.update(loss.item(), step, learning_rate=lr, epsilon=epsilon)
 
+            # update mean episode lengths curve
+            mean_ep_len_curve.update(
+                np.mean(experiences_info["episode_lengths"]),
+                step,
+                learning_rate=lr,
+                epsilon=epsilon,
+            )
+
             # update reward curves
             if reward_curve_steps_per_point is not None:
                 self._update_reward_curves(
@@ -1063,11 +1132,13 @@ class DRL_agent(agent):
         self.visited_states_norm = visited_states_norm
 
         self.loss_curve = loss_curve
+        self.mean_ep_len_curve = mean_ep_len_curve
+        self.episode_lengths_tuple = episode_lengths_tuple
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                if reward_curve_mode_ == "return":
+                if reward_curve_mode_ == "greedy_return":
                     self.reward_curve_return = reward_curves[idx]
-                elif reward_curve_mode_ == "last_reward":
+                elif reward_curve_mode_ == "greedy_last_reward":
                     self.reward_curve_last_reward = reward_curves[idx]
                 elif reward_curve_mode_ == "best_reward":
                     self.reward_curve_best_reward = reward_curves[idx]
@@ -1082,7 +1153,13 @@ class DRL_agent(agent):
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
         if plot_learning_curves:
-            self._plot_learning_curves(loss_curve, reward_curves, reward_curve_mode)
+            self._plot_learning_curves(
+                loss_curve,
+                reward_curves,
+                reward_curve_mode,
+                mean_ep_len_curve,
+                episode_lengths_tuple,
+            )
 
     def load_net(
         self,
@@ -1209,7 +1286,7 @@ class DRL_agent(agent):
             )
 
         # make a small simulation to get the rewards of the net for an episode
-        overall_return, last_reward, _, _, _ = self.greedy_simulation(
+        overall_return, _, _, _, episode_rewards, _ = self.greedy_simulation(
             q_net=q_net,
             env=copy.deepcopy(environment),  # [1]
             max_steps=steps_per_point,
@@ -1218,10 +1295,10 @@ class DRL_agent(agent):
             use_masking=use_masking,
         )
         for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-            if reward_curve_mode_ == "return":
+            if reward_curve_mode_ == "greedy_return":
                 step_reward = overall_return
-            elif reward_curve_mode_ == "last_reward":
-                step_reward = last_reward
+            elif reward_curve_mode_ == "greedy_last_reward":
+                step_reward = episode_rewards[-1]
             elif reward_curve_mode_ == "best_reward":
                 step_reward = training_best_reward
             # update learning curves
@@ -1232,6 +1309,8 @@ class DRL_agent(agent):
         loss_curve: learning_curve,
         reward_curves: list[learning_curve],
         reward_curve_mode: list[str],
+        mean_episode_len_curve: learning_curve,
+        episodes_lengths: tuple[int],
     ):
         """Plot learning curves adapted to `DRL_agent` outputs.
 
@@ -1257,17 +1336,23 @@ class DRL_agent(agent):
             save_path=f"./img/{self.save_folder}/loss_learning_curve.png",
         )
 
+        mean_episode_len_curve.plot(
+            title="",
+            ylabel="Mean of episodes length",
+            xlabel="Training step",
+            plot_epsilon=True,
+            plot_lr=True,
+            save_path=f"./img/{self.save_folder}/mean_ep_len_learning_curve.png",
+        )
+
         if len(reward_curves) != 0:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                if reward_curve_mode_ == "return":
-                    reward_ylabel = "Return"
-                    suffix = "return"
-                elif reward_curve_mode_ == "last_reward":
+                if reward_curve_mode_ == "greedy_return":
+                    reward_ylabel = "Greedy test return"
+                elif reward_curve_mode_ == "greedy_last_reward":
                     reward_ylabel = "Last reward of greedy simulation"
-                    suffix = "last_reward"
                 elif reward_curve_mode_ == "best_reward":
                     reward_ylabel = "Maximum reward"
-                    suffix = "best_reward"
 
                 reward_curves[idx].plot(
                     title="",
@@ -1276,8 +1361,31 @@ class DRL_agent(agent):
                     plot_epsilon=True,
                     plot_lr=False,
                     y_divisor=None,
-                    save_path=f"./img/{self.save_folder}/reward_learning_curve_{suffix}.png",
+                    save_path=f"./img/{self.save_folder}/reward_learning_curve_{reward_curve_mode_}.png",
                 )
+
+        # ---------- Episodes lengths plot ----------
+        performance = episodes_lengths
+        iterations = list(range(len(episodes_lengths)))
+        ylabel, xlabel = "Experiences", "Episode"
+        ep_len_save_path = f"./img/{self.save_folder}/episode_len_learning_curve.png"
+
+        # plot
+        fig, ax = plt.subplots(figsize=(8, 5))
+        labels_fontsize, ticks_fontsize = 10, 8
+
+        ax.set_xlabel(xlabel, fontsize=labels_fontsize)
+        ax.set_ylabel(ylabel, fontsize=labels_fontsize)
+        ax.tick_params(direction="in", top=True, right=True, labelsize=ticks_fontsize)
+
+        # learning curve
+        ax.plot(iterations, performance)
+
+        # save the created figure
+        fig.savefig(ep_len_save_path, bbox_inches="tight", dpi=800)
+        save_fig_df(
+            ep_len_save_path, x=iterations, y=performance, xlabel=xlabel, ylabel=ylabel
+        )
 
 
 class DQN_agent(DRL_agent):
@@ -1415,7 +1523,7 @@ class DQN_agent(DRL_agent):
         min_lr = kwargs.get("min_lr", 0.0)
 
         reward_curve_mode = kwargs.get(
-            "reward_curve_mode", ["return", "last_reward", "best_reward"]
+            "reward_curve_mode", ["greedy_return", "greedy_last_reward", "best_reward"]
         )
         reward_curve_steps_per_point = kwargs.get("reward_curve_steps_per_point", 30)
         debug_counter = kwargs.get("debug_counter", 1)
@@ -1482,12 +1590,13 @@ class DQN_agent(DRL_agent):
         # Step 1: perform the training of the neural network
         # -------------------------------------------------------------------------
         # ------ INITIALIZATION ------
-        # initialize step number, amount of loss, memory of experiences,
+        # initialize step number, amount of loss, episode length, memory of experiences,
         # visited_states_norm storage, storage of best reward seen along all the
         # training, storage of known states and storage of the higher htc
         # obtained in memory experiences
         step = 1
         loss = np.inf
+        episode_length = 0
         replay_memory = ReplayMemory(
             memory_size,
             self,
@@ -1508,6 +1617,8 @@ class DQN_agent(DRL_agent):
 
         # initialize learning curves
         loss_curve = learning_curve()
+        mean_ep_len_curve = learning_curve()
+        episode_lengths_tuple = tuple()
         reward_curves = []
         if reward_curve_steps_per_point is not None:
             for _ in reward_curve_mode:
@@ -1533,19 +1644,25 @@ class DQN_agent(DRL_agent):
             # ----------------------------------------------------
             # generate selected number of new experiences
             # continue experience storage from the state s' of the last experience
-            new_experiences, _, _, _, _ = self._experience_generation(
-                n_experiences=n_new_experiences_per_step,
-                q_net=q_net,
-                environment=environment,
-                device=device,
-                epsilon=epsilon,
-                initial_state=replay_memory.memory[-1].next_state_norm,
-                initial_action=None,
-                follow_next_action=False,
-                decorrelated=decorrelated,
-                use_masking=use_masking,
-                reset_options=reset_options,
+            new_experiences, _, _, _, _, last_episode_length, experiences_info = (
+                self._experience_generation(
+                    n_experiences=n_new_experiences_per_step,
+                    q_net=q_net,
+                    environment=environment,
+                    device=device,
+                    epsilon=epsilon,
+                    initial_state=replay_memory.memory[-1].next_state_norm,
+                    initial_action=None,
+                    follow_next_action=False,
+                    decorrelated=decorrelated,
+                    use_masking=use_masking,
+                    reset_options=reset_options,
+                    episode_length=episode_length,
+                )
             )
+            episode_length = last_episode_length
+            # store full list of episode lengths
+            episode_lengths_tuple += experiences_info["episode_lengths"]
 
             # store the transition
             replay_memory.push(new_experiences)
@@ -1643,6 +1760,14 @@ class DQN_agent(DRL_agent):
             # update loss curve when all batches per step have been processed
             loss_curve.update(loss.item(), step, learning_rate=lr, epsilon=epsilon)
 
+            # update mean episode lengths curve
+            mean_ep_len_curve.update(
+                np.mean(experiences_info["episode_lengths"]),
+                step,
+                learning_rate=lr,
+                epsilon=epsilon,
+            )
+
             # update target network weights if `n_steps_for_target_net_update`
             # is reached
             if target_estimation_mode in ["target network", "double"]:
@@ -1697,11 +1822,13 @@ class DQN_agent(DRL_agent):
         self.visited_states_norm = visited_states_norm
 
         self.loss_curve = loss_curve
+        self.mean_ep_len_curve = mean_ep_len_curve
+        self.episode_lengths_tuple = episode_lengths_tuple
         if reward_curve_steps_per_point is not None:
             for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
-                if reward_curve_mode_ == "return":
+                if reward_curve_mode_ == "greedy_return":
                     self.reward_curve_return = reward_curves[idx]
-                elif reward_curve_mode_ == "last_reward":
+                elif reward_curve_mode_ == "greedy_last_reward":
                     self.reward_curve_last_reward = reward_curves[idx]
                 elif reward_curve_mode_ == "best_reward":
                     self.reward_curve_best_reward = reward_curves[idx]
@@ -1716,4 +1843,10 @@ class DQN_agent(DRL_agent):
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
         if plot_learning_curves:
-            self._plot_learning_curves(loss_curve, reward_curves, reward_curve_mode)
+            self._plot_learning_curves(
+                loss_curve,
+                reward_curves,
+                reward_curve_mode,
+                mean_ep_len_curve,
+                episode_lengths_tuple,
+            )
