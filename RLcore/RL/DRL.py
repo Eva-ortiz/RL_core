@@ -55,10 +55,15 @@ class ReplayMemory:
 
         When `capacity` is reached, `deque` iterator automatically remove older
         elements when new ones are appended. [2]
+
+        Notes
+        -----
+        * Currently, we address saving `visited_states_norm` of vectorized
+          environments.
         """
         for experience in experiences:
             self.memory.append(experience)
-            self.visited_states_norm.add(tuple(experience.state_norm))
+            self.visited_states_norm.update(tuple(map(tuple(experience.state_norm))))
 
     def sample(self, batch_size, random_rng):
         """Sample `batch_size` stored experiences.
@@ -418,6 +423,9 @@ class DRL_agent(agent):
           case, a restart of the environment will be done.
         * Decorrelated transitions are given through random sampling of states.
           Several authors recommend this practice.
+        * Currently, we do not distinguish
+          `reached_states`/`visited_states_norm` among the vectorized
+          environments.
         """
         # check input initial action
         if initial_action is not None and not isinstance(initial_action, Action):
@@ -458,7 +466,9 @@ class DRL_agent(agent):
                 )
 
             # store visited states
-            visited_states_norm.add(tuple(state_norm))  # solve not hashable
+            visited_states_norm.update(
+                tuple(map(tuple, state_norm))
+            )  # solve not hashable
 
             # if action has not been provided as input, choose action with
             # behaviour policy
@@ -478,7 +488,7 @@ class DRL_agent(agent):
             # add an step to episode length if not decorrelated samples
             episode_length += 1 if not decorrelated else 0
             # store reached states
-            reached_states.add(tuple(next_state_norm))
+            reached_states.update(tuple(map(tuple, next_state_norm)))
 
             # store the transition
             if not follow_next_action:
@@ -944,7 +954,7 @@ class DRL_agent(agent):
 
             # store unique visited states with the usage of set
             for state_norm in batch_visited_states_norm:
-                visited_states_norm.add(tuple(state_norm))
+                visited_states_norm.update(tuple(map(tuple, state_norm)))
 
             # store full list of episode lengths
             episode_lengths_tuple += experiences_info["episode_lengths"]
@@ -1615,7 +1625,7 @@ class DQN_agent(DRL_agent):
                 for experience in batch:
                     # store unique visited states during the network training
                     # with the usage of set
-                    visited_states_norm.add(tuple(experience.state_norm))
+                    visited_states_norm.update(tuple(map(tuple, experience.state_norm)))
 
                     # Obtain ALL the q value estimations of the net for state.
                     # It is necessary to set input as float32 so Pytorch does
