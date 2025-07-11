@@ -556,10 +556,10 @@ class DRL_agent(agent):
     def _act(
         self,
         mode: Literal["greedy", "epsilon_greedy"],
-        state_norm: State_norm,
+        state_norm: np.ndarray[State_norm] | State_norm,
         q_net: QNN,
         device: Literal["cuda", "mps", "cpu"],
-        action_masks: np.ndarray[bool] | None = None,
+        action_masks: np.ndarray[np.ndarray[bool]] | np.ndarray[bool] | None = None,
         **kwargs,
     ) -> tuple[int, float, str]:
         """Return the action that the agent takes given an state.
@@ -573,14 +573,14 @@ class DRL_agent(agent):
             We can select:
                 * "greedy" actions
                 * "epsilon_greedy" actions
-        state_norm: State_norm
+        state_norm:  np.ndarray[State_norm] | State_norm
             Normalized state where the agent currently is.
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
-        action_masks : np.ndarray[bool] | None, optional
+        action_masks : np.ndarray[np.ndarray[bool]] | np.ndarray[bool] | None, optional
             Action mask, by default None, so do not apply masking.
 
         **kwargs
@@ -603,6 +603,19 @@ class DRL_agent(agent):
         ----------
         ..[1] https://pytorch.org/docs/stable/generated/torch.max.html#torch.max
         """
+        # check if dimensions and number of environments are consistent
+        assert len(state_norm.shape) == len(
+            action_masks.shape
+        ), "Inconsistent `state_norm`/`action_masks` dimensions."
+        assert 2 >= len(state_norm.shape) >= 1, "Inconsistent state dimensions."
+        if len(state_norm.shape) > 1:
+            assert (
+                state_norm.shape[0] == action_masks.shape[0]
+            ), "Inconsistent number of environments."
+
+        # check if we are in the vectorized case or not
+        n_envs = 1 if len(state_norm.shape) == 1 else state_norm.shape[0]
+
         # make sure we will not influence the q_network
         with torch.no_grad():
             # Obtain the action-state values for all actions from input `state`
@@ -648,15 +661,37 @@ class DRL_agent(agent):
 
         # select the action depending on a random number and epsilon value
         if epsilon > rand:
-            # change related to invalid action masking
-            valid_actions = (
-                np.nonzero(action_masks)[
-                    0
-                ].tolist()  # actions idx: native python dtypes
-                if action_masks is not None
-                else range(len(self.actions))
-            )
-            action_idx = self.random_rng.choice(valid_actions)
+            # change related to vectorized environments
+            if n_envs > 1:
+                if action_masks is not None:
+                    # get action mask indexes for each environment
+                    env_indexes, unmasked_actions_idxs = np.nonzero(action_masks)
+                    # store in a convenient way valid actions idxs for each env
+                    valid_actions = [
+                        unmasked_actions_idxs[env_indexes == env_idx]
+                        for env_idx in range(n_envs)
+                    ]
+                    # check we preserve the number of environments in valid actions list
+                    assert len(valid_actions) == n_envs
+                else:
+                    # select all actions indexes as valid actions for each env
+                    valid_actions = np.tile(range(len(self.actions)), (n_envs, 1))
+
+                # select an action idx per environment among valid actions per env
+                action_idx = [
+                    self.random_rng.choice(env_actions) for env_actions in valid_actions
+                ]
+
+            else:
+                # change related to invalid action masking
+                valid_actions = (
+                    np.nonzero(action_masks)[
+                        0
+                    ].tolist()  # actions idx: native python dtypes
+                    if action_masks is not None
+                    else range(len(self.actions))
+                )
+                action_idx = self.random_rng.choice(valid_actions)
 
         # select the action with a greedy policy
         else:
