@@ -558,7 +558,7 @@ class DRL_agent(agent):
             state.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
-        action_masks : np.ndarray[bool] | None
+        action_masks : np.ndarray[bool] | None, optional
             Action mask, by default None, so do not apply masking.
 
         **kwargs
