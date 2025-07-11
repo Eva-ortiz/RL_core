@@ -537,6 +537,7 @@ class DRL_agent(agent):
         state_norm: State_norm,
         q_net: QNN,
         device: Literal["cuda", "mps", "cpu"],
+        action_masks: np.ndarray[bool] | None = None,
         **kwargs,
     ) -> tuple[int, float, str]:
         """Return the action that the agent takes given an state.
@@ -557,6 +558,8 @@ class DRL_agent(agent):
             state.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
+        action_masks : np.ndarray[bool] | None
+            Action mask, by default None, so do not apply masking.
 
         **kwargs
             epsilon : float
@@ -578,14 +581,21 @@ class DRL_agent(agent):
         ----------
         ..[1] https://pytorch.org/docs/stable/generated/torch.max.html#torch.max
         """
-        # Obtain the action-state values for all actions from input `state`
-        # Additionally, execute the forward pass at the same device we are using for
-        # training to avoid a Pytorch `RuntimeError`
-        # It is necessary to set input as float32 so Pythorch does not return us
-        # a `RuntimeError` due dtypes
-        q_values = q_net.forward(
-            torch.from_numpy(state_norm.astype(np.float32)).to(device)
-        )
+        # make sure we will not influence the q_network
+        with torch.no_grad():
+            # Obtain the action-state values for all actions from input `state`
+            # Additionally, execute the forward pass at the same device we are
+            # using for training to avoid a Pytorch `RuntimeError`
+            # It is necessary to set input as float32 so Pythorch does not
+            # return us a `RuntimeError` due dtypes
+            q_values = q_net.forward(
+                torch.from_numpy(state_norm.astype(np.float32)).to(device)
+            )
+
+            # change related to invalid action masking
+            if action_masks is not None:
+                # q value of -inf for invalid actions
+                q_values[~np.array(action_masks)] = -np.inf
 
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
@@ -616,7 +626,13 @@ class DRL_agent(agent):
 
         # select the action depending on a random number and epsilon value
         if epsilon > rand:
-            action_idx = self.random_rng.randint(0, len(self.actions) - 1)
+            # change related to invalid action masking
+            valid_actions = (
+                np.where(action_masks)[0].tolist()  # actions idx: native python dtypes
+                if action_masks is not None
+                else range(len(self.actions) - 1)
+            )
+            action_idx = self.random_rng.choice(valid_actions)
 
         # select the action with a greedy policy
         else:
