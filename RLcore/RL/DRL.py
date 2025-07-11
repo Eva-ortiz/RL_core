@@ -611,7 +611,7 @@ class DRL_agent(agent):
 
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
-        if len(self.actions) != q_values.shape[0]:
+        if len(self.actions) != q_values.shape[-1]:
             raise ValueError(
                 "Outputs of the `q_net` should correspond to the actions "
                 "stored in `self.actions`, even respecting the order."
