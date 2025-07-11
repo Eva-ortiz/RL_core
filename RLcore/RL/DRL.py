@@ -630,7 +630,7 @@ class DRL_agent(agent):
             valid_actions = (
                 np.where(action_masks)[0].tolist()  # actions idx: native python dtypes
                 if action_masks is not None
-                else range(len(self.actions) - 1)
+                else range(len(self.actions))
             )
             action_idx = self.random_rng.choice(valid_actions)
 
