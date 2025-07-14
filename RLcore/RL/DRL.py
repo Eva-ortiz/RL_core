@@ -561,10 +561,13 @@ class DRL_agent(agent):
         device: Literal["cuda", "mps", "cpu"],
         action_masks: np.ndarray[np.ndarray[bool]] | np.ndarray[bool] | None = None,
         **kwargs,
-    ) -> tuple[int, float, str]:
+    ) -> tuple[list[int] | int, list[float] | float, list[str] | str]:
         """Return the action that the agent takes given an state.
 
         In other words, this is the application of the policy.
+        * If working with vectorized environments; `state_norm`, `action_masks`
+        and this function outputs will be contained in np.ndarrays and lists,
+        with one element per environment.
 
         Parameters
         ----------
@@ -590,8 +593,12 @@ class DRL_agent(agent):
 
         Returns
         -------
-        action_idx, q_value, action_label : tuple[int, float, str]
-            Index, value and label of the action taken by the agent.
+        action_idx : list[int] | int
+            Index of the action(s) taken by the agent.
+        q_value : list[float] | float
+            Value of the action(s) taken by the agent.
+        action_label : list[str] | str
+            Label of the action(s) taken by the agent.
 
         Warnings
         --------
@@ -722,7 +729,7 @@ class DRL_agent(agent):
             action_val.append(q_values[env, action])
             action_label.append(self.actions[action])
 
-        # check if the action seected is the maximum value action with greedy
+        # check if the action selected is the maximum value action with greedy
         # behaviour
         if mode == "greedy":
             assert (max_val == action_val).all()
