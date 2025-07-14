@@ -696,18 +696,25 @@ class DRL_agent(agent):
 
         # select the action with a greedy policy
         else:
-            # store the max action value
-            max_val = torch.max(q_values)
+            action_idx, max_val = [], []
+            # expand q_values dims to unify with several envs case
+            q_values = np.expand_dims(q_values, axis=0) if n_envs == 1 else q_values
 
-            # store the max actions indexes
-            max_action_idxs = [
-                idx for idx, q_value in enumerate(q_values) if q_value == max_val
-            ]
+            for env_idx in range(n_envs):
+                # store the max action value
+                max_val.append(torch.max(q_values[env_idx]))
 
-            # select randomly the action between actions which presents the
-            # maximum value (so if there is a tie, `torch.max` do not take
-            # always the first action) [2]
-            action_idx = self.random_rng.choice(max_action_idxs)
+                # store the max actions indexes
+                max_action_idxs = [
+                    idx
+                    for idx, q_value in enumerate(q_values[env_idx])
+                    if q_value == max_val[env_idx]
+                ]
+
+                # select randomly the action between actions which presents the
+                # maximum value (so if there is a tie, `torch.max` do not take
+                # always the first action) [2]
+                action_idx.append(self.random_rng.choice(max_action_idxs))
 
         # get action value and label with selected index
         action_val = q_values[action_idx]
