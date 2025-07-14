@@ -717,8 +717,10 @@ class DRL_agent(agent):
                 action_idx.append(self.random_rng.choice(max_action_idxs))
 
         # get action value and label with selected index
-        action_val = q_values[action_idx]
-        action_label = self.actions[action_idx]
+        action_val, action_label = [], []
+        for env, action in enumerate(action_idx):
+            action_val.append(q_values[env, action])
+            action_label.append(self.actions[action])
 
         # check if the action seected is the maximum value action with greedy
         # behaviour
