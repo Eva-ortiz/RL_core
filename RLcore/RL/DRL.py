@@ -725,7 +725,7 @@ class DRL_agent(agent):
         # check if the action seected is the maximum value action with greedy
         # behaviour
         if mode == "greedy":
-            assert max_val == action_val
+            assert (max_val == action_val).all()
 
         return action_idx, action_val, action_label
 
