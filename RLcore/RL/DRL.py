@@ -677,11 +677,6 @@ class DRL_agent(agent):
                     # select all actions indexes as valid actions for each env
                     valid_actions = np.tile(range(len(self.actions)), (n_envs, 1))
 
-                # select an action idx per environment among valid actions per env
-                action_idx = [
-                    self.random_rng.choice(env_actions) for env_actions in valid_actions
-                ]
-
             else:
                 # change related to invalid action masking
                 valid_actions = (
@@ -691,7 +686,13 @@ class DRL_agent(agent):
                     if action_masks is not None
                     else range(len(self.actions))
                 )
-                action_idx = self.random_rng.choice(valid_actions)
+                # expand valid actions dims to unify with several envs
+                valid_actions = np.expand_dims(valid_actions, axis=0)
+
+            # select an action idx per environment among valid actions per env
+            action_idx = [
+                self.random_rng.choice(env_actions) for env_actions in valid_actions
+            ]
 
         # select the action with a greedy policy
         else:
