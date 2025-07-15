@@ -82,9 +82,7 @@ def call_method_or_attr_of_envs(
             else None
         )
         attr_return = (
-            env.get_attr(attr_name, indices=env_to_call)
-            if attr_name is not None
-            else None
+            None if attr_name is None else env.get_attr(attr_name, indices=env_to_call)
         )
     else:
         method_return = (
