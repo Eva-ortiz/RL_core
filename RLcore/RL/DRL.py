@@ -432,11 +432,34 @@ class DRL_agent(agent):
           `reached_states`/`visited_states_norm` among the vectorized
           environments.
         """
+        # check number of envs
+        n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+
         # check input initial action
-        if initial_action is not None and not isinstance(initial_action, Action):
+        if n_envs == 0 and (
+            initial_action is not None and not isinstance(initial_action, Action)
+        ):
             raise ValueError(
                 f"Just one initial action must be provided with dtype {Action}."
             )
+
+        elif n_envs > 0:
+            # check vectorized inputs if VecEnv
+            if not isinstance(initial_action, np.ndarray) or not isinstance(
+                initial_state, np.ndarray
+            ):
+                raise ValueError(
+                    """Array of actions and states must be provided if working with
+                    vectorized environments."""
+                )
+
+            # check coherence between state inputs
+            state_norm_bool = map(isinstance, initial_state, State_norm)
+            if not (state_norm_bool == state_norm_bool[0]).all():
+                raise ValueError(
+                    """Vector of initial states with incoherent dtypes. Please,
+                    provide either all normalized or unnormalized states."""
+                )
 
         # obtain normalized state from initial state
         state_norm = (
