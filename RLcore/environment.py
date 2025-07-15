@@ -43,6 +43,7 @@ def call_method_or_attr_of_envs(
     method_name: str | None = None,
     attr_name: str | None = None,
     env_to_call: list[int] | int | None = None,
+    kwargs_per_env: bool = False,
     **method_kwargs,
 ) -> tuple[list | None, list | None]:
     """Call a method of envs inside an vectorized environment.
@@ -61,6 +62,18 @@ def call_method_or_attr_of_envs(
         Any keyword arguments to provide in the call.
     env_to_call : list[int] | int | None, optional
         Indices of envs whose method to call.
+    kwargs_per_env : bool, optional
+        Indicate if we input different kwargs per environment or they all have
+        same kwargs.
+        If True, pay attention to kwargs input, as they must have
+        f"env{n_envs}_kwargs" keys as follows:
+            >>> {
+            >>> env0_kwargs : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
+            >>> kwarg1_val, ...},
+            >>> env1_kwargs : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
+            >>> kwarg1_val, ...},
+            >>> ...}
+        Starting from 0 index!
 
     Returns
     -------
@@ -74,13 +87,33 @@ def call_method_or_attr_of_envs(
     .. [1] https://stable-baselines.readthedocs.io/en/master/guide/vec_envs.html#stable_baselines.common.vec_env.VecEnv.env_method
     """
     if isinstance(env, VecEnv):
-        method_return = (
-            env.env_method(
-                method_name=method_name, indices=env_to_call, **method_kwargs
-            )
-            if method_name is not None
-            else None
-        )
+        if method_name is None:
+            method_return = None
+        else:
+            if not kwargs_per_env:
+                method_return = env.env_method(
+                    method_name=method_name, indices=env_to_call, **method_kwargs
+                )
+            else:
+                # check kwargs format if single kwargs per environment
+                expected_keys = [
+                    f"env{env_idx}_kwargs" for env_idx in range(env.num_envs)
+                ]
+                if not all(list(method_kwargs.keys()) == expected_keys):
+                    raise ValueError(
+                        f"Unexpected keys of `method_kwargs`, expected: {expected_keys}"
+                    )
+
+                # get method return per environment
+                method_return = [
+                    env.env_method(
+                        method_name=method_name,
+                        indices=env_idx,
+                        **method_kwargs[expected_keys[env_idx]],
+                    )
+                    for env_idx in range(env.num_envs)
+                ]
+
         attr_return = (
             None if attr_name is None else env.get_attr(attr_name, indices=env_to_call)
         )
