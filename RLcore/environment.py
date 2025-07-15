@@ -45,7 +45,7 @@ def call_method_or_attr_of_envs(
     env_to_call: list[int] | int | None = None,
     kwargs_per_env: bool = False,
     **method_kwargs,
-) -> tuple[list | None, list | None]:
+) -> tuple[list[Any] | None, list[Any] | None]:
     """Call a method of envs inside an vectorized environment.
 
     Also perform the call in case of a non vectorized environment.
@@ -77,9 +77,9 @@ def call_method_or_attr_of_envs(
 
     Returns
     -------
-    list | None
+    list[Any] | None
         List of items returned by the environment’s method call
-    list | None
+    list[Any] | None
         List of values of ‘attr_name’ in all environments
 
     References
