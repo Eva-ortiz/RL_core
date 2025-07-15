@@ -13,7 +13,6 @@ import torch.nn as nn
 import torch.optim as optim
 from basics import agent
 from environment import (
-    ENV,
     Action,
     Reward,
     Setup_mode,
@@ -317,11 +316,11 @@ class DRL_agent(agent):
         self,
         n_experiences: int,
         q_net: QNN,
-        environment: ENV,
+        environment: gym.Env | VecEnv,
         device: Literal["cuda", "mps", "cpu"],
         epsilon: float,
-        initial_state: State | State_norm,
-        initial_action: Action | None,
+        initial_state: np.ndarray[State | State_norm] | State | State_norm,
+        initial_action: np.ndarray[Action | None] | Action | None,
         follow_next_action: bool = False,
         decorrelated: bool = False,
         **kwargs,
@@ -346,18 +345,24 @@ class DRL_agent(agent):
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
-        environment : ENV
-            Environment object of the problem.
+        environment : gym.Env | VecEnv
+            Environment object of the problem. If vectorized, stack multiple
+            independent environments generating experiences in a parallelized
+            manner. [2]
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
         epsilon : float
             Value of epsilon in epsilon greedy policy. With higher
             epsilon, more exploratory behaviour of the policy.
-        initial_state : State | State_norm
+        initial_state : np.ndarray[State | State_norm] | State | State_norm
             State to initialize the generation of experiences from.
-        initial_action : Action | None
+            If vectorized environment, an array must be provided with the
+            initial state per env.
+        initial_action : np.ndarray[Action | None] | Action | None
             First action index. If None, select an action according to
             epsilon_greedy behaviour policy.
+            If vectorized environment, an array must be provided with the
+            initial action index per env.
         follow_next_action : bool, optional
             Select to store and follow a' along all experiencies generation.
             By default, False.
