@@ -43,7 +43,7 @@ def call_method_or_attr_of_envs(
     method_name: str | None = None,
     attr_name: str | None = None,
     env_to_call: list[int] | int | None = None,
-    kwargs_per_env: bool = False,
+    kwargs_per_env: dict[str, dict[str | Any]] | None = None,
     **method_kwargs,
 ) -> tuple[list[Any] | None, list[Any] | None]:
     """Call a method of envs inside an vectorized environment.
@@ -62,18 +62,18 @@ def call_method_or_attr_of_envs(
         Any keyword arguments to provide in the call.
     env_to_call : list[int] | int | None, optional
         Indices of envs whose method to call.
-    kwargs_per_env : bool, optional
-        Indicate if we input different kwargs per environment or they all have
-        same kwargs.
-        If True, pay attention to kwargs input, as they must have
-        f"env{n_envs}_kwargs" keys as follows:
+    kwargs_per_env : dict[str, dict[str | Any]] | None, optional
+        Dictionary with different kwargs per environment, if proceeds.
+        Pay attention to kwargs input, as they must have f"env{n_envs}_kwargs"
+        keys as follows:
             >>> {
-            >>> env0_kwargs : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
+            >>> "env0_kwargs" : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
             >>> kwarg1_val, ...},
-            >>> env1_kwargs : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
+            >>> "env1_kwargs" : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
             >>> kwarg1_val, ...},
             >>> ...}
         Starting from 0 index!
+        If applied, `method_kwargs` won´t be empolyed.
 
     Returns
     -------
@@ -90,16 +90,22 @@ def call_method_or_attr_of_envs(
         if method_name is None:
             method_return = None
         else:
-            if not kwargs_per_env:
+            if kwargs_per_env is None:
                 method_return = env.env_method(
                     method_name=method_name, indices=env_to_call, **method_kwargs
                 )
             else:
-                # check kwargs format if single kwargs per environment
+                # make sure method_kwargs are not expected to be applied
+                if method_kwargs:
+                    raise ValueError(
+                        "If `kwargs_per_env` provided, kwargs input not applied."
+                    )
+
+                # check kwargs format if kwargs per environment provided
                 expected_keys = [
                     f"env{env_idx}_kwargs" for env_idx in range(env.num_envs)
                 ]
-                if not all(list(method_kwargs.keys()) == expected_keys):
+                if not all(list(kwargs_per_env.keys()) == expected_keys):
                     raise ValueError(
                         f"Unexpected keys of `method_kwargs`, expected: {expected_keys}"
                     )
@@ -109,7 +115,7 @@ def call_method_or_attr_of_envs(
                     env.env_method(
                         method_name=method_name,
                         indices=env_idx,
-                        **method_kwargs[expected_keys[env_idx]],
+                        method_kwargs=kwargs_per_env[expected_keys[env_idx]],
                     )
                     for env_idx in range(env.num_envs)
                 ]
