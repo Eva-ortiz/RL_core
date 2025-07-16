@@ -454,7 +454,9 @@ class DRL_agent(agent):
                 )
 
             # check coherence between state inputs
-            state_norm_bool = map(isinstance, initial_state, State_norm)
+            state_norm_bool = np.array(
+                list(map(isinstance, initial_state, [State_norm] * n_envs))
+            )
             if not (state_norm_bool == state_norm_bool[0]).all():
                 raise ValueError(
                     """Vector of initial states with incoherent dtypes. Please,
