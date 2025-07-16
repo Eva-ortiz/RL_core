@@ -479,6 +479,10 @@ class DRL_agent(agent):
                     env=environment,
                     method_name="_normalize_state_values",
                     env_to_call=idx_envs_list,
+                    kwargs_per_env={
+                        f"env{env_idx}_kwargs": {"state": initial_state[env_idx]}
+                        for env_idx in idx_envs_list
+                    },
                 )
 
         # set action as initial action
