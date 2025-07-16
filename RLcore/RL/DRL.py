@@ -434,6 +434,7 @@ class DRL_agent(agent):
         """
         # check number of envs
         n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+        idx_envs_list = list(range(n_envs))
 
         # check input initial action
         if n_envs == 0 and (
@@ -464,11 +465,22 @@ class DRL_agent(agent):
                 )
 
         # obtain normalized state from initial state
-        state_norm = (
-            initial_state
-            if isinstance(initial_state, State_norm)
-            else environment._normalize_state_values(initial_state)
-        )
+        if n_envs == 0:
+            state_norm = (
+                initial_state
+                if isinstance(initial_state, State_norm)
+                else environment._normalize_state_values(initial_state)
+            )
+        else:
+            if all(state_norm_bool):  # all normalized
+                state_norm = initial_state
+            elif all(~state_norm_bool):  # all NOT normalized
+                state_norm, _ = call_method_or_attr_of_envs(
+                    env=environment,
+                    method_name="_normalize_state_values",
+                    env_to_call=idx_envs_list,
+                )
+
         # set action as initial action
         action_idx = initial_action
 
