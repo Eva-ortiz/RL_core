@@ -8,6 +8,7 @@ from typing import Any, Literal
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -548,10 +549,11 @@ class DRL_agent(agent):
             # if action masking, check env action masks [1]
             action_masks = get_action_masks(environment) if use_masking else None
 
-            # if action has not been provided as input, choose action with
+            # if action(s) has not been provided as input, choose action with
             # behaviour policy
-            if action_idx is None:
-                action_idx, _, _ = self._act(
+            action_idxs_none = pd.isna(action_idx)
+            if action_idx is None or (action_idxs_none).any():
+                non_none_action_idx, _, _ = self._act(
                     "epsilon_greedy",
                     state_norm,
                     q_net=q_net,
@@ -559,6 +561,12 @@ class DRL_agent(agent):
                     epsilon=epsilon,
                     action_masks=action_masks,
                 )
+                if n_envs == 0:
+                    action_idx = non_none_action_idx
+                else:
+                    action_idx[action_idxs_none] = np.array(non_none_action_idx)[
+                        action_idxs_none
+                    ]
 
             # observe response of the environment
             next_state_norm, reward, terminated, truncated, _ = environment.step(
