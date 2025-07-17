@@ -1707,6 +1707,7 @@ class DQN_agent(DRL_agent):
                             experience.next_state_norm,
                             q_net=network_for_target_estimation,
                             device=device,
+                            action_masks=experience.next_action_masks,
                         )
 
                         # double DQN: take the q value from target network with
