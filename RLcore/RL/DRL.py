@@ -17,11 +17,27 @@ from plots import learning_curve, save_fig_df
 from sb3_contrib.common.maskable.utils import get_action_masks
 
 transition = namedtuple(
-    "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
+    "transition",
+    (
+        "state_norm",
+        "action_masks",
+        "action_idx",
+        "reward",
+        "next_state_norm",
+        "next_action_masks",
+    ),
 )
 sarsa_transition = namedtuple(
     "transition",
-    ("state_norm", "action_idx", "reward", "next_state_norm", "next_action_idx"),
+    (
+        "state_norm",
+        "action_masks",
+        "action_idx",
+        "reward",
+        "next_state_norm",
+        "next_action_masks",
+        "next_action_idx",
+    ),
 )
 
 
@@ -491,7 +507,14 @@ class DRL_agent(agent):
             # store the transition
             if not follow_next_action:
                 experiences.append(
-                    transition(state_norm, action_idx, reward, next_state_norm)
+                    transition(
+                        state_norm,
+                        action_masks,
+                        action_idx,
+                        reward,
+                        next_state_norm,
+                        next_action_masks,
+                    )
                 )
 
             # store sarsa transition if track_next_action is selected
@@ -510,9 +533,11 @@ class DRL_agent(agent):
                 experiences.append(
                     sarsa_transition(
                         state_norm,
+                        action_masks,
                         action_idx,
                         reward,
                         next_state_norm,
+                        next_action_masks,
                         next_action_idx,
                     )
                 )
