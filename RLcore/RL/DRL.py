@@ -21,14 +21,31 @@ from environment import (
     call_method_or_attr_of_envs,
 )
 from plots import learning_curve, save_fig_df
+from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3.common.vec_env import VecEnv
 
 transition = namedtuple(
-    "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
+    "transition",
+    (
+        "state_norm",
+        "action_masks",
+        "action_idx",
+        "reward",
+        "next_state_norm",
+        "next_action_masks",
+    ),
 )
 sarsa_transition = namedtuple(
     "transition",
-    ("state_norm", "action_idx", "reward", "next_state_norm", "next_action_idx"),
+    (
+        "state_norm",
+        "action_masks",
+        "action_idx",
+        "reward",
+        "next_state_norm",
+        "next_action_masks",
+        "next_action_idx",
+    ),
 )
 
 
@@ -202,6 +219,7 @@ class DRL_agent(agent):
         max_steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
+        use_masking: bool = False,
     ) -> tuple[float, Reward, Reward, State_norm, str]:
         """Greedy simulation with current Q network and reset environment.
 
@@ -220,6 +238,9 @@ class DRL_agent(agent):
         reset_options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset. By
             default, None.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks for action selection, by
+            default False.
 
         Returns
         -------
@@ -264,6 +285,9 @@ class DRL_agent(agent):
 
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
+            # if action masking, check env action masks
+            action_masks = get_action_masks(env) if use_masking else None
+
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
             action_idx, _, action_label = self._act(
@@ -271,6 +295,7 @@ class DRL_agent(agent):
                 state_norm,
                 q_net=q_net,
                 device=device,
+                action_masks=action_masks,
             )
 
             # observe response of the environment
@@ -323,6 +348,7 @@ class DRL_agent(agent):
         initial_action: np.ndarray[Action | None] | Action | None,
         follow_next_action: bool = False,
         decorrelated: bool = False,
+        use_masking: bool = False,
         **kwargs,
     ) -> tuple[
         list[namedtuple],
@@ -369,6 +395,9 @@ class DRL_agent(agent):
         decorrelated : bool, optional
             Select if experience samples are decorrelated. If True, they will.
             By default, False.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks during experience
+            generation, by default False.
 
         ** kwargs
             reset_options : dict, optional
@@ -516,6 +545,9 @@ class DRL_agent(agent):
                 tuple(map(tuple, state_norm))
             )  # solve not hashable
 
+            # if action masking, check env action masks [1]
+            action_masks = get_action_masks(environment) if use_masking else None
+
             # if action has not been provided as input, choose action with
             # behaviour policy
             if action_idx is None:
@@ -525,6 +557,7 @@ class DRL_agent(agent):
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
+                    action_masks=action_masks,
                 )
 
             # observe response of the environment
@@ -536,10 +569,20 @@ class DRL_agent(agent):
             # store reached states
             reached_states.update(tuple(map(tuple, next_state_norm)))
 
+            # if action masking, check env action masks [1]
+            next_action_masks = get_action_masks(environment) if use_masking else None
+
             # store the transition
             if not follow_next_action:
                 experiences.append(
-                    transition(state_norm, action_idx, reward, next_state_norm)
+                    transition(
+                        state_norm,
+                        action_masks,
+                        action_idx,
+                        reward,
+                        next_state_norm,
+                        next_action_masks,
+                    )
                 )
 
             # store sarsa transition if track_next_action is selected
@@ -551,15 +594,18 @@ class DRL_agent(agent):
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
+                    action_masks=next_action_masks,
                 )
 
                 # store next action in transition
                 experiences.append(
                     sarsa_transition(
                         state_norm,
+                        action_masks,
                         action_idx,
                         reward,
                         next_state_norm,
+                        next_action_masks,
                         next_action_idx,
                     )
                 )
@@ -832,6 +878,7 @@ class DRL_agent(agent):
         batch_size: int = 64,
         max_steps: int = np.inf,
         tol_loss: float = 0.0,
+        use_masking: bool = False,
         plot_learning_curves: bool = True,
         save_q_net: bool = True,
         **kwargs,
@@ -860,6 +907,9 @@ class DRL_agent(agent):
             By default, np.inf
         tol_loss : float, optional
             Tolerance to consider action values have converged. By default, 0.0
+        use_masking : bool, optional
+            Whether or not to use invalid action masks during training, by
+            default False.
         plot_learning_curves : bool, optional
             Select to plot learning curves or not. By default, True
         save_q_net : bool, optional
@@ -1069,6 +1119,7 @@ class DRL_agent(agent):
                 initial_batch_action,
                 follow_next_action,
                 decorrelated,
+                use_masking=use_masking,
                 reset_options=reset_options,
                 episode_length=episode_length,
             )
@@ -1126,6 +1177,7 @@ class DRL_agent(agent):
                             experience.next_state_norm,
                             q_net=q_net,
                             device=device,
+                            action_masks=experience.next_action_masks,
                         )
 
                     # update the target action values
@@ -1176,6 +1228,7 @@ class DRL_agent(agent):
                     epsilon,
                     training_best_reward,
                     reset_options,
+                    use_masking,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
@@ -1293,6 +1346,7 @@ class DRL_agent(agent):
         epsilon: float | None = None,
         training_best_reward: float | None = None,
         reset_options: dict[str, Any] | None = None,
+        use_masking: bool = False,
     ):
         """Update selected reward curves in `reward_curve_mode` for each step.
 
@@ -1329,6 +1383,9 @@ class DRL_agent(agent):
         reset_options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset. By
             default, None.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks in greedy simulation, by
+            default False.
 
         Warnings
         --------
@@ -1360,6 +1417,7 @@ class DRL_agent(agent):
             max_steps=steps_per_point,
             device=device,
             reset_options=reset_options,
+            use_masking=use_masking,
         )
         for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
             if reward_curve_mode_ == "greedy_return":
@@ -1777,6 +1835,7 @@ class DQN_agent(DRL_agent):
                             experience.next_state_norm,
                             q_net=network_for_target_estimation,
                             device=device,
+                            action_masks=experience.next_action_masks,
                         )
 
                         # double DQN: take the q value from target network with
