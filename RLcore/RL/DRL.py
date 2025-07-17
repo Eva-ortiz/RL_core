@@ -485,6 +485,9 @@ class DRL_agent(agent):
             # store reached states
             reached_states.add(tuple(next_state_norm))
 
+            # if action masking, check env action masks [1]
+            next_action_masks = get_action_masks(environment) if use_masking else None
+
             # store the transition
             if not follow_next_action:
                 experiences.append(
@@ -500,6 +503,7 @@ class DRL_agent(agent):
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
+                    action_masks=next_action_masks,
                 )
 
                 # store next action in transition
