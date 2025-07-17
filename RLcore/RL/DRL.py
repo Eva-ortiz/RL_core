@@ -190,6 +190,7 @@ class DRL_agent(agent):
         max_steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
+        use_masking: bool = False,
     ) -> tuple[float, Reward, Reward, State_norm, str]:
         """Greedy simulation with current Q network and reset environment.
 
@@ -208,6 +209,9 @@ class DRL_agent(agent):
         reset_options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset. By
             default, None.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks for action selection, by
+            default False.
 
         Returns
         -------
@@ -252,6 +256,9 @@ class DRL_agent(agent):
 
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
+            # if action masking, check env action masks
+            action_masks = get_action_masks(env) if use_masking else None
+
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
             action_idx, _, action_label = self._act(
@@ -259,6 +266,7 @@ class DRL_agent(agent):
                 state_norm,
                 q_net=q_net,
                 device=device,
+                action_masks=action_masks,
             )
 
             # observe response of the environment
