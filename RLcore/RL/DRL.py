@@ -627,6 +627,10 @@ class DRL_agent(agent):
         ----------
         ..[1] https://pytorch.org/docs/stable/generated/torch.max.html#torch.max
         """
+        assert len(state_norm.shape) == len(
+            action_masks.shape
+        ), "Inconsistent `state_norm`/`action_masks` dimensions."
+
         # make sure we will not influence the q_network
         with torch.no_grad():
             # Obtain the action-state values for all actions from input `state`
