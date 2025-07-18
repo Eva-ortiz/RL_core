@@ -287,7 +287,7 @@ class DRL_agent(agent):
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
             # if action masking, check env action masks
-            action_masks = get_action_masks(env) if use_masking else None
+            action_masks = np.array(get_action_masks(env)) if use_masking else None
 
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
