@@ -879,7 +879,7 @@ class DRL_agent(agent):
         # get action value and label with selected index
         action_val, action_label = [], []
         for env, action in enumerate(action_idx):
-            action_val.append(q_values[env, action])
+            action_val.append(q_values[env][action])
             action_label.append(self.actions[action])
 
         # check if the action selected is the maximum value action with greedy
