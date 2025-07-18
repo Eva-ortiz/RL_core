@@ -412,8 +412,9 @@ class DRL_agent(agent):
         Returns
         -------
         experiences : list[namedtuple]
-            List which contains each one of the experiences, composed by
-            (state_norm, action_idx, reward, next_state_norm).
+            List which contains each one of the environments experiences,
+            composed by (state_norm, action_masks, action_idx, reward,
+            next_state_norm, next_action_masks).
             If follow_next_action, also include next_action_idx.
         visited_states_norm : tuple[State_norm]
             Tuple of visited states (normalized).
@@ -587,7 +588,7 @@ class DRL_agent(agent):
 
             # store the transition
             if not follow_next_action:
-                experiences.append(
+                experiences.extend(
                     transition(
                         state_norm,
                         action_masks,
@@ -596,6 +597,18 @@ class DRL_agent(agent):
                         next_state_norm,
                         next_action_masks,
                     )
+                    if n_envs == 0
+                    else [
+                        transition(
+                            state_norm[env_idx],
+                            action_masks[env_idx],
+                            action_idx[env_idx],
+                            reward[env_idx],
+                            next_state_norm[env_idx],
+                            next_action_masks[env_idx],
+                        )
+                        for env_idx in idx_envs_list
+                    ]
                 )
 
             # store sarsa transition if track_next_action is selected
@@ -611,7 +624,7 @@ class DRL_agent(agent):
                 )
 
                 # store next action in transition
-                experiences.append(
+                experiences.extend(
                     sarsa_transition(
                         state_norm,
                         action_masks,
@@ -621,6 +634,19 @@ class DRL_agent(agent):
                         next_action_masks,
                         next_action_idx,
                     )
+                    if n_envs == 0
+                    else [
+                        sarsa_transition(
+                            state_norm[env_idx],
+                            action_masks[env_idx],
+                            action_idx[env_idx],
+                            reward[env_idx],
+                            next_state_norm[env_idx],
+                            next_action_masks[env_idx],
+                            next_action_idx[env_idx],
+                        )
+                        for env_idx in idx_envs_list
+                    ]
                 )
 
             # consider the end of the episode or continue from next state
