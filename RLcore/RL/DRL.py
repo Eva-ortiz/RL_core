@@ -626,9 +626,21 @@ class DRL_agent(agent):
             # consider the end of the episode or continue from next state
             state_norm, _ = (
                 environment.reset(options=kwargs.get("reset_options"))
-                if terminated or truncated
+                if n_envs == 0 and (terminated or truncated)
                 else (next_state_norm, _)
             )
+            # SB3 MANAGES ENV RESET FOR VECTORIZED [2]
+            #   When using vectorized environments, the environments are
+            #   automatically reset at the end of each episode.
+            #   Thus, the observation returned for the i-th environment when
+            #   done[i] is true will in fact be the first observation of the
+            #   next episode, not the last observation of the episode that has
+            #   just terminated.
+            #   You can access the “real” final observation of the terminated
+            #   episode—that is, the one that accompanied the done event
+            #   provided by the underlying environment—using the
+            #   terminal_observation keys in the info dicts returned by the
+            #   vecenv.
 
             # check the end of the episode also for episode length track
             if terminated or truncated:
