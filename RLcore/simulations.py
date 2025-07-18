@@ -218,6 +218,9 @@ def approximated_simulation(
                 if cfg_hiperpar["env_multiprocess"]
                 else DummyVecEnv,
             )
+        # initialize a different environment to be employed for inner
+        # simulations during training
+        env_upd_curves = env(**env_kwargs)
 
         # create the new agent with selected algorithm
         _, actions = call_method_or_attr_of_envs(
@@ -235,6 +238,7 @@ def approximated_simulation(
         agent.train(
             device=device,
             environment=train_env,
+            env_upd_curves=env_upd_curves,
             plot_learning_curves=monitor_train,
             save_q_net=True,
             reward_curve_mode=cfg_env["plots"]["reward_curve_mode"],
