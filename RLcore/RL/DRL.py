@@ -34,6 +34,7 @@ transition = namedtuple(
         "reward",
         "next_state_norm",
         "next_action_masks",
+        "env_idx",
     ),
 )
 sarsa_transition = namedtuple(
@@ -46,6 +47,7 @@ sarsa_transition = namedtuple(
         "next_state_norm",
         "next_action_masks",
         "next_action_idx",
+        "env_idx",
     ),
 )
 
@@ -606,6 +608,7 @@ class DRL_agent(agent):
                             reward[env_idx],
                             next_state_norm[env_idx],
                             next_action_masks[env_idx],
+                            env_idx,
                         )
                         for env_idx in idx_envs_list
                     ]
@@ -644,6 +647,7 @@ class DRL_agent(agent):
                             next_state_norm[env_idx],
                             next_action_masks[env_idx],
                             next_action_idx[env_idx],
+                            env_idx,
                         )
                         for env_idx in idx_envs_list
                     ]
