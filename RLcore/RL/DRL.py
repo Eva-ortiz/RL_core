@@ -887,14 +887,13 @@ class DRL_agent(agent):
         if mode == "greedy":
             assert (max_val == action_val).all()
 
-        # retrieve single values for single env
+        # retrieve value for single env, unpacking single element of list
         if n_envs == 1:
-            action_idx, action_val, action_label = (
-                action_idx.item(),
-                action_val.item(),
-                action_label.item(),
+            [action_idx], [action_val], [action_label] = (
+                action_idx,
+                action_val,
+                action_label,
             )
-
         return action_idx, action_val, action_label
 
     def _check_train_inputs(
