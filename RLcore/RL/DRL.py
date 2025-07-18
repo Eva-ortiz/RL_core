@@ -691,7 +691,7 @@ class DRL_agent(agent):
             # set action to None once its input has been employed, so we do not
             # get stuck in the initial action for follow_next_action = False
             else:
-                action_idx = None
+                action_idx = None if n_envs == 0 else np.tile(None, n_envs)
 
         # output stored experiences, visited and reached states, in addition to
         # the final visited state and next action
