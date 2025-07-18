@@ -569,9 +569,14 @@ class DRL_agent(agent):
                     ]
 
             # observe response of the environment
-            next_state_norm, reward, terminated, truncated, _ = environment.step(
-                action_idx
-            )
+            env_step_out = environment.step(action_idx)
+            # unpack step returns
+            if n_envs == 0:
+                next_state_norm, reward, terminated, truncated, _ = env_step_out
+            # if vectorized environment, step method just returns `dones`
+            else:
+                next_state_norm, reward, dones, _ = env_step_out
+
             # add an step to episode length if not decorrelated samples
             episode_length += 1 if not decorrelated else 0
             # store reached states
@@ -634,7 +639,12 @@ class DRL_agent(agent):
             # terminated or truncated has been reached. Otherwise, set action to
             # next_action.
             if follow_next_action:
-                action_idx = None if terminated or truncated else next_action_idx
+                if n_envs == 0:
+                    action_idx = None if (terminated or truncated) else next_action_idx
+                else:
+                    action_idx = next_action_idx
+                    if any(dones):
+                        action_idx[dones] = np.tile(None, n_envs)[dones]
 
             # set action to None once its input has been employed, so we do not
             # get stuck in the initial action for follow_next_action = False
