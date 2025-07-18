@@ -115,7 +115,7 @@ def call_method_or_attr_of_envs(
                     env.env_method(
                         method_name=method_name,
                         indices=env_idx,
-                        method_kwargs=kwargs_per_env[expected_keys[env_idx]],
+                        **kwargs_per_env[expected_keys[env_idx]],
                     )
                     for env_idx in range(env.num_envs)
                 ]
