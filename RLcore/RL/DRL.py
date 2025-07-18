@@ -931,7 +931,8 @@ class DRL_agent(agent):
     def train(
         self,
         device: Literal["cuda", "mps", "cpu"],
-        environment: gym.Env,
+        environment: gym.Env | VecEnv,
+        env_upd_curves: gym.Env,
         discount_rate: float = 0.99,
         lr: float = 0.1,
         epsilon: float = 1.0,
@@ -949,8 +950,12 @@ class DRL_agent(agent):
         ----------
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training. Used as an `act` method input.
-        environment : environment
+        environment : gym.Env | VecEnv
             Environment object of the problem.
+        env_upd_curves : gym.Env
+            Environment of the problem.
+            Independent of `environment` so simulations steps do not influence
+            over training environment. Strictly non vectorized.
         discount_rate : float, optional
             Discount rate factor for Reinforcement Learning algorithm.
             By default, 0.99
@@ -1280,7 +1285,7 @@ class DRL_agent(agent):
             # update reward curves
             if reward_curve_steps_per_point is not None:
                 self._update_reward_curves(
-                    environment,
+                    env_upd_curves,
                     q_net,
                     step,
                     device,
@@ -1418,9 +1423,11 @@ class DRL_agent(agent):
 
         Parameters
         ----------
-        environment: environment
-            Initialized environment of the simulation, deep copied inside of
-            this function to perform the greedy simulation.
+        environment: gym.Env
+            Initialized environment of the simulation.
+            DISCLAIMER : Make sure an independent env is provided, as greedy
+            simulation takes steps than can modify the internal state of the
+            provided environment.
         q_net: QNN
             Q-network with which make the simulation.
         step: int
@@ -1476,7 +1483,7 @@ class DRL_agent(agent):
         # make a small simulation to get the rewards of the net for an episode
         overall_return, _, _, _, episode_rewards, _ = self.greedy_simulation(
             q_net=q_net,
-            env=copy.deepcopy(environment),  # [1]
+            env=environment,  # [1]
             max_steps=steps_per_point,
             device=device,
             reset_options=reset_options,
@@ -1622,7 +1629,8 @@ class DQN_agent(DRL_agent):
     def train(
         self,
         device: Literal["cuda", "mps", "cpu"],
-        environment: gym.Env,
+        environment: gym.Env | VecEnv,
+        env_upd_curves: gym.Env,
         discount_rate: float = 0.99,
         lr: float = 0.1,
         epsilon: float = 1.0,
@@ -1972,7 +1980,7 @@ class DQN_agent(DRL_agent):
             # episode
             if reward_curve_steps_per_point is not None:
                 self._update_reward_curves(
-                    environment,
+                    env_upd_curves,
                     q_net,
                     step,
                     device,
