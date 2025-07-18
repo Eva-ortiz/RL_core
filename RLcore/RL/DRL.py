@@ -82,7 +82,7 @@ class ReplayMemory:
         """
         for experience in experiences:
             self.memory.append(experience)
-            self.visited_states_norm.update(tuple(map(tuple(experience.state_norm))))
+            self.visited_states_norm.update(experience.state_norm)
 
     def sample(self, batch_size, random_rng):
         """Sample `batch_size` stored experiences.
@@ -1874,7 +1874,7 @@ class DQN_agent(DRL_agent):
                 for experience in batch:
                     # store unique visited states during the network training
                     # with the usage of set
-                    visited_states_norm.update(tuple(map(tuple, experience.state_norm)))
+                    visited_states_norm.update(experience.state_norm)
 
                     # Obtain ALL the q value estimations of the net for state.
                     # It is necessary to set input as float32 so Pytorch does
