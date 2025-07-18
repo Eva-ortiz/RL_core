@@ -857,8 +857,8 @@ class DRL_agent(agent):
         # select the action with a greedy policy
         else:
             action_idx, max_val = [], []
-            # expand q_values dims to unify with several envs case
-            q_values = np.expand_dims(q_values, axis=0) if n_envs == 1 else q_values
+            # encapsulate q_values in list to unify with several envs case
+            q_values = [q_values] if n_envs == 1 else q_values
 
             for env_idx in range(n_envs):
                 # store the max action value
