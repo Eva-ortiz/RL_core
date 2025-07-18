@@ -406,10 +406,10 @@ class DRL_agent(agent):
             reset_options : dict, optional
                 Additional information to specify how the environment is reset
                 (depending on the specific environment). By default, None.
-            episode_length : int
-                Track of episode length, useful when input environment has
-                already taken few steps but did not reach a terminal state.
-                If not provided, it is assumed to be 0.
+            episode_lengths : np.ndarray[int]
+                Track of episode length(s), useful when input environment has
+                already taken few steps but did not reach a terminal state. If
+                not provided, it is assumed to be [0]*n_envs.
 
         Returns
         -------
@@ -429,9 +429,9 @@ class DRL_agent(agent):
         last_next_action : Action | None
             Last action a' performed. Useful to continue the sequence of
             generated experiences.
-        episode_length : int
-            Current track of episode length, useful to continue from last
-            unfinished episode, this is, from last next_state.
+        episode_lengths : np.ndarray[int]
+            Current track of episode length(s), useful to continue from last
+            unfinished episode(s), this is, from last next_state(s).
         info : dict[str, Any]
             Additional info about experience generation, such as,
                 * episodes longitude: if decorrelated samples, it will always be
@@ -527,9 +527,7 @@ class DRL_agent(agent):
         reached_states = set()
         info = {"episode_lengths": tuple()}
 
-        # TODO : obtain actions with vectorized environments, for ref see
-        # MaskablePPO.collect_rollouts
-        episode_length = kwargs.get("episode_length", 0)
+        episode_lengths = kwargs.get("episode_lengths", np.tile(0, n_envs))
         for _ in range(n_experiences):
             # if decorrelated selected, randomly select next state and set the
             # environment to this state
@@ -581,7 +579,7 @@ class DRL_agent(agent):
                 next_state_norm, reward, dones, _ = env_step_out
 
             # add an step to episode length if not decorrelated samples
-            episode_length += 1 if not decorrelated else 0
+            episode_lengths += 1 if not decorrelated else 0
             # store reached states
             reached_states.update(tuple(map(tuple, next_state_norm)))
 
@@ -673,9 +671,12 @@ class DRL_agent(agent):
             #   vecenv.
 
             # check the end of the episode also for episode length track
-            if terminated or truncated:
-                info["episode_lengths"] += (episode_length,)
-                episode_length = 0
+            if n_envs == 0 and (terminated or truncated):
+                info["episode_lengths"] += (episode_lengths[0],)
+                episode_lengths = np.array([0])
+            elif n_envs > 0 and any(dones):
+                info["episode_lengths"] += tuple(episode_lengths[dones])
+                episode_lengths[dones] = np.tile(0, n_envs)[dones]
 
             # If follow_next_action is selected, force reset action to None if
             # terminated or truncated has been reached. Otherwise, set action to
@@ -701,7 +702,7 @@ class DRL_agent(agent):
             reached_states,
             state_norm,
             action_idx,
-            episode_length,
+            episode_lengths,
             info,
         )
 
@@ -1109,12 +1110,15 @@ class DRL_agent(agent):
         # Step 1: perform the training of the system
         # -------------------------------------------------------------------------
         # ------ INITIALIZATION ------
+        # check number of envs
+        n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+
         # initialize step count, amount of loss, storage of best reward seen
         # along all the training and episode length track
         step = 1
         loss = np.inf
         training_best_reward = -np.inf
-        episode_length = 0
+        episode_lengths = np.tile(0, n_envs)
 
         # initialize learning curves
         loss_curve = learning_curve()
@@ -1167,7 +1171,7 @@ class DRL_agent(agent):
                 _,
                 last_batch_state_norm,
                 last_batch_action,
-                last_episode_length,
+                last_episode_lengths,
                 experiences_info,
             ) = self._experience_generation(
                 batch_size,
@@ -1181,11 +1185,11 @@ class DRL_agent(agent):
                 decorrelated,
                 use_masking=use_masking,
                 reset_options=reset_options,
-                episode_length=episode_length,
+                episode_lengths=episode_lengths,
             )
             initial_batch_state_norm = last_batch_state_norm
             initial_batch_action = last_batch_action
-            episode_length = last_episode_length
+            episode_lengths = last_episode_lengths
 
             # store unique visited states with the usage of set
             for state_norm in batch_visited_states_norm:
@@ -1730,6 +1734,9 @@ class DQN_agent(DRL_agent):
                 'target network' or 'double'."""
             )
 
+        # check number of envs
+        n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+
         # obtain episode start with reset method [2]
         if isinstance(environment, VecEnv):
             environment.seed(seed=self.seed)
@@ -1782,7 +1789,7 @@ class DQN_agent(DRL_agent):
         # obtained in memory experiences
         step = 1
         loss = np.inf
-        episode_length = 0
+        episode_lengths = np.tile(0, n_envs)
         replay_memory = ReplayMemory(
             memory_size,
             self,
@@ -1829,7 +1836,7 @@ class DQN_agent(DRL_agent):
             # ----------------------------------------------------
             # generate selected number of new experiences
             # continue experience storage from the state s' of the last experience
-            new_experiences, _, _, _, _, last_episode_length, experiences_info = (
+            new_experiences, _, _, _, _, last_episode_lengths, experiences_info = (
                 self._experience_generation(
                     n_experiences=n_new_experiences_per_step,
                     q_net=q_net,
@@ -1841,10 +1848,10 @@ class DQN_agent(DRL_agent):
                     follow_next_action=False,
                     decorrelated=decorrelated,
                     reset_options=reset_options,
-                    episode_length=episode_length,
+                    episode_lengths=episode_lengths,
                 )
             )
-            episode_length = last_episode_length
+            episode_lengths = last_episode_lengths
             # store full list of episode lengths
             episode_lengths_tuple += experiences_info["episode_lengths"]
 
