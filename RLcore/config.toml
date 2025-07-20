@@ -16,6 +16,9 @@ lr = false # lr curve
 
 # ----------- Approximated Sarsa algorithm config -----------
 [DRL.Sarsa.hiperparams]
+n_envs = 4
+env_multiprocess = true
+
 hidden_layers = 4
 hidden_neur = 64
 
@@ -38,6 +41,9 @@ discount_rate = 0.99
 
 # ----------- Approximated double Q-learning algorithm config -----------
 [DRL.double_Q-learning.hiperparams]
+n_envs = 4
+env_multiprocess = true
+
 hidden_layers = 4
 hidden_neur = 64
 
