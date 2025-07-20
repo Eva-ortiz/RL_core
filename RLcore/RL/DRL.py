@@ -1440,6 +1440,7 @@ class DQN_agent(DRL_agent):
         batch_size: int = 64,
         max_steps: int = np.inf,
         tol_loss: float = 0.0,
+        use_masking: bool = False,
         plot_learning_curves: bool = True,
         save_q_net: bool = True,
         memory_size: int = 10000,
@@ -1607,6 +1608,7 @@ class DQN_agent(DRL_agent):
             initial_action=None,
             follow_next_action=False,
             decorrelated=decorrelated,
+            use_masking=use_masking,
             reset_options=reset_options,
         )
         visited_states_norm = set()
@@ -1652,6 +1654,7 @@ class DQN_agent(DRL_agent):
                     initial_action=None,
                     follow_next_action=False,
                     decorrelated=decorrelated,
+                    use_masking=use_masking,
                     reset_options=reset_options,
                     episode_length=episode_length,
                 )
@@ -1789,6 +1792,7 @@ class DQN_agent(DRL_agent):
                     epsilon,
                     training_best_reward,
                     reset_options,
+                    use_masking,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
