@@ -1744,6 +1744,7 @@ class DQN_agent(DRL_agent):
 
         # check number of envs
         n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+        idx_envs_list = list(range(n_envs))
 
         # obtain episode start with reset method [2]
         if isinstance(environment, VecEnv):
@@ -1843,8 +1844,28 @@ class DQN_agent(DRL_agent):
             # ----------------------------------------------------
             # Step 1.0: store new experiences in memory replay
             # ----------------------------------------------------
+            # continue experience storage from the state s' of the last
+            # experience of each environment
+            if n_envs == 0:
+                next_state_norm = replay_memory.memory[-1].next_state_norm
+            else:
+                last_experiences = {
+                    replay_memory.memory[
+                        -(env_idx + 1)
+                    ].env_idx: replay_memory.memory[  # +1 so we index from -1 to -4
+                        -(env_idx + 1)
+                    ].next_state_norm
+                    for env_idx in idx_envs_list
+                }
+                # make sure we have one experience per environment
+                assert pd.Series(last_experiences.keys()).isin(idx_envs_list).all()
+                # make sure last experiences are stored in the desired order
+                # (this is, by environment idx)
+                next_state_norm = np.array(
+                    [last_experiences[env_idx] for env_idx in idx_envs_list]
+                )
+
             # generate selected number of new experiences
-            # continue experience storage from the state s' of the last experience
             new_experiences, _, _, _, _, last_episode_lengths, experiences_info = (
                 self._experience_generation(
                     n_experiences=n_new_experiences_per_step,
@@ -1852,7 +1873,7 @@ class DQN_agent(DRL_agent):
                     environment=environment,
                     device=device,
                     epsilon=epsilon,
-                    initial_state=replay_memory.memory[-1].next_state_norm,
+                    initial_state=next_state_norm,
                     initial_action=(None if n_envs == 0 else np.tile(None, n_envs)),
                     follow_next_action=False,
                     decorrelated=decorrelated,
