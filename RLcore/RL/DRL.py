@@ -160,6 +160,8 @@ class DRL_agent(agent):
     References
     ----------
     .. [1] https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+    .. [2] https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html
+    .. [3] https://stable-baselines.readthedocs.io/en/master/guide/vec_envs.html#stable_baselines.common.vec_env.VecEnv.step
     """
 
     def __init__(
@@ -370,7 +372,8 @@ class DRL_agent(agent):
         Parameters
         ----------
         n_experiences : int
-            Number of experiences to generate.
+            Number of experiences to generate PER ENVIRONMENT. This means that,
+            if we select `N` experiences, we will store `N * n_envs` experiences.
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
@@ -452,8 +455,8 @@ class DRL_agent(agent):
             methods are also crucial for the correct functioning of this
             experience generation.
         MaskablePPO.collect_rollouts
-            TODO : Method from `MaskablePPO` algorithm, reference to use
-            vectorized environments.
+            Method from `MaskablePPO` algorithm, reference to use vectorized
+            environments.
 
         Notes
         -----
@@ -465,6 +468,7 @@ class DRL_agent(agent):
           `reached_states`/`visited_states_norm` among the vectorized
           environments.
         """
+        # ----------- INITIAL CHECKS -----------
         # check number of envs
         n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
         idx_envs_list = list(range(n_envs))
@@ -497,6 +501,7 @@ class DRL_agent(agent):
                     provide either all normalized or unnormalized states."""
                 )
 
+        # ----------- NORMALIZE INIT STATE -----------
         # obtain normalized state from initial state
         if n_envs == 0:
             state_norm = (
@@ -518,6 +523,7 @@ class DRL_agent(agent):
                     },
                 )
 
+        # ----------- EXECUTE ENV STEPS -----------
         # set action as initial action
         action_idx = initial_action
 
@@ -578,6 +584,7 @@ class DRL_agent(agent):
             else:
                 next_state_norm, reward, dones, _ = env_step_out
 
+            # ----------- STORE RELEVANT PRODUCTS -----------
             # add an step to episode length if not decorrelated samples
             episode_lengths += 1 if not decorrelated else 0
             # store reached states
@@ -651,6 +658,7 @@ class DRL_agent(agent):
                     ]
                 )
 
+            # ----------- NECESSARY RESETS -----------
             # consider the end of the episode or continue from next state
             state_norm, _ = (
                 environment.reset(options=kwargs.get("reset_options"))
