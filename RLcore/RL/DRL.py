@@ -893,7 +893,7 @@ class DRL_agent(agent):
         # check if the action selected is the maximum value action with greedy
         # behaviour
         if mode == "greedy":
-            assert (max_val == action_val).all()
+            assert (max_val == np.array(action_val)).all()
 
         # retrieve value for single env, unpacking single element of list
         if n_envs == 1:
