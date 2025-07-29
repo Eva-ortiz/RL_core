@@ -568,7 +568,8 @@ class DRL_agent(agent):
                     epsilon=epsilon,
                     action_masks=action_masks,
                 )
-                if n_envs == 0:
+                # avoid indexing if just one environment
+                if n_envs <= 1:
                     action_idx = non_none_action_idx
                 else:
                     action_idx[action_idxs_none] = np.array(non_none_action_idx)[
@@ -782,7 +783,7 @@ class DRL_agent(agent):
             ), "Inconsistent number of environments."
 
         # check if we are in the vectorized case or not
-        n_envs = 1 if len(state_norm.shape) == 1 else state_norm.shape[0]
+        n_envs = 0 if len(state_norm.shape) == 1 else state_norm.shape[0]
 
         # make sure we will not influence the q_network
         with torch.no_grad():
@@ -830,7 +831,7 @@ class DRL_agent(agent):
         # select the action depending on a random number and epsilon value
         if epsilon > rand:
             # change related to vectorized environments
-            if n_envs > 1:
+            if n_envs > 0:
                 if action_masks is not None:
                     # get action mask indexes for each environment
                     env_indexes, unmasked_actions_idxs = np.nonzero(action_masks)
@@ -866,7 +867,7 @@ class DRL_agent(agent):
         else:
             action_idx, max_val = [], []
             # encapsulate q_values in list to unify with several envs case
-            q_values = [q_values] if n_envs == 1 else q_values
+            q_values = [q_values] if n_envs == 0 else q_values
 
             for env_idx in range(n_envs):
                 # store the max action value
@@ -896,7 +897,7 @@ class DRL_agent(agent):
             assert (max_val == np.array(action_val)).all()
 
         # retrieve value for single env, unpacking single element of list
-        if n_envs == 1:
+        if n_envs == 0:
             [action_idx], [action_val], [action_label] = (
                 action_idx,
                 action_val,
