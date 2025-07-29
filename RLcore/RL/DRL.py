@@ -869,7 +869,8 @@ class DRL_agent(agent):
             # encapsulate q_values in list to unify with several envs case
             q_values = [q_values] if n_envs == 0 else q_values
 
-            for env_idx in range(n_envs):
+            # iterate through one env when we are addressing non vectorized environment
+            for env_idx in range(max(n_envs, 1)):
                 # store the max action value
                 max_val.append(torch.max(q_values[env_idx]))
 
