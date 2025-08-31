@@ -1812,7 +1812,11 @@ class DQN_agent(DRL_agent):
         replay_memory = ReplayMemory(
             memory_size,
             self,
-            n_experiences=batch_size,  # agent._experience_generation kwargs
+            n_experiences=(
+                int(batch_size / n_envs)  # initialize with batch size
+                if n_envs * n_new_experiences_per_step < batch_size
+                else n_new_experiences_per_step  # n_new_experiences_per_step*n_envs inside
+            ),  # agent._experience_generation kwargs
             q_net=q_net,
             environment=environment,
             device=device,

@@ -58,7 +58,7 @@ tol_loss = -inf
 
 memory_size = 10000
 n_batch_per_step = 4
-n_new_experiences_per_step = 4
+n_new_experiences_per_step = 4 # CAUTION: this will be multiplied by the number of envs
 target_estimation_mode = "double" # + info: DRL_agent.train args
 n_steps_for_target_net_update = 5000
 
