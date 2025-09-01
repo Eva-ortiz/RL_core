@@ -1809,14 +1809,15 @@ class DQN_agent(DRL_agent):
         step = 1
         loss = np.inf
         episode_lengths = np.tile(0, n_envs)
+        n_experiences_mem_init = (
+            int(batch_size / n_envs)  # initialize with batch size
+            if n_envs * n_new_experiences_per_step < batch_size
+            else n_new_experiences_per_step  # n_new_experiences_per_step*n_envs inside
+        )
         replay_memory = ReplayMemory(
             memory_size,
             self,
-            n_experiences=(
-                int(batch_size / n_envs)  # initialize with batch size
-                if n_envs * n_new_experiences_per_step < batch_size
-                else n_new_experiences_per_step  # n_new_experiences_per_step*n_envs inside
-            ),  # agent._experience_generation kwargs
+            n_experiences=n_experiences_mem_init,  # agent._experience_generation kwargs
             q_net=q_net,
             environment=environment,
             device=device,
@@ -1830,6 +1831,7 @@ class DQN_agent(DRL_agent):
         )
         visited_states_norm = set()
         training_best_reward = -np.inf
+        total_n_experiences = n_experiences_mem_init
 
         # initialize learning curves
         loss_curve = learning_curve()
@@ -1899,6 +1901,8 @@ class DQN_agent(DRL_agent):
             episode_lengths = last_episode_lengths
             # store full list of episode lengths
             episode_lengths_tuple += experiences_info["episode_lengths"]
+            # store total number of experiences
+            total_n_experiences += len(new_experiences)
 
             # store the transition
             replay_memory.push(new_experiences)
@@ -2078,6 +2082,8 @@ class DQN_agent(DRL_agent):
         # -------------------------------------------------------------------------
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
+        logging.info(f"Total number of experiences obtained: {total_n_experiences}")
+
         if plot_learning_curves:
             self._plot_learning_curves(
                 loss_curve,
