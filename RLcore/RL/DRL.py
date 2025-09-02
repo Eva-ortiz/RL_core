@@ -344,7 +344,7 @@ class DRL_agent(agent):
 
     def _experience_generation(
         self,
-        n_experiences: int,
+        n_experiences_per_env: int,
         q_net: QNN,
         environment: gym.Env | VecEnv,
         device: Literal["cuda", "mps", "cpu"],
@@ -371,7 +371,7 @@ class DRL_agent(agent):
 
         Parameters
         ----------
-        n_experiences : int
+        n_experiences_per_env : int
             Number of experiences to generate PER ENVIRONMENT. This means that,
             if we select `N` experiences, we will store `N * n_envs` experiences.
         q_net : QNN
@@ -534,7 +534,7 @@ class DRL_agent(agent):
         info = {"episode_lengths": tuple()}
 
         episode_lengths = kwargs.get("episode_lengths", np.tile(0, n_envs))
-        for _ in range(n_experiences):
+        for _ in range(n_experiences_per_env):
             # if decorrelated selected, randomly select next state and set the
             # environment to this state
             if decorrelated:
@@ -1817,7 +1817,7 @@ class DQN_agent(DRL_agent):
         replay_memory = ReplayMemory(
             memory_size,
             self,
-            n_experiences=n_experiences_mem_init,  # agent._experience_generation kwargs
+            n_experiences_per_env=n_experiences_mem_init,  # agent._experience_generation kwargs
             q_net=q_net,
             environment=environment,
             device=device,
@@ -1884,7 +1884,7 @@ class DQN_agent(DRL_agent):
             # generate selected number of new experiences
             new_experiences, _, _, _, _, last_episode_lengths, experiences_info = (
                 self._experience_generation(
-                    n_experiences=n_new_experiences_per_step,
+                    n_experiences_per_env=n_new_experiences_per_step,
                     q_net=q_net,
                     environment=environment,
                     device=device,
