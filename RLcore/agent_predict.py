@@ -3,8 +3,9 @@ from collections import deque
 from typing import Any
 
 import gymnasium as gym
-from environment import Reward, State, State_norm
 from sb3_contrib import MaskablePPO
+
+from RLcore.environment import Reward, State, State_norm
 
 
 def maskablePPO_step_prediction(
@@ -57,15 +58,11 @@ def maskablePPO_step_prediction(
         raise ValueError("Wrong type of `state` input.")
 
     action_masks = env.action_masks() if use_masking else None
-    action, _ = agent.predict(
-        norm_state, deterministic=deterministic, action_masks=action_masks
-    )  # [1]
+    action, _ = agent.predict(norm_state, deterministic=deterministic, action_masks=action_masks)  # [1]
 
     # we extract the action number with `.item()` as we are predicting from
     # just one observation
-    norm_next_state, reward, terminated, truncated, info = env.step(
-        action.item()
-    )  # [2]
+    norm_next_state, reward, terminated, truncated, info = env.step(action.item())  # [2]
 
     return env, norm_next_state, reward, terminated, truncated, info
 
