@@ -645,10 +645,10 @@ class DRL_agent(agent):
         # make sure we will not influence the q_network
         with torch.no_grad():
             # Obtain the action-state values for all actions from input `state`
-            # Additionally, execute the forward pass at the same device we are
-            # using for training to avoid a Pytorch `RuntimeError`
-            # It is necessary to set input as float32 so Pythorch does not
-            # return us a `RuntimeError` due dtypes
+            # Additionally, execute the forward pass at the same device we are using for
+            # training to avoid a Pytorch `RuntimeError`
+            # It is necessary to set input as float32 so Pythorch does not return us
+            # a `RuntimeError` due dtypes
             q_values = q_net.forward(
                 torch.from_numpy(state_norm.astype(np.float32)).to(device)
             )
