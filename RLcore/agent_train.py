@@ -1,6 +1,7 @@
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -14,7 +15,7 @@ from sb3_custom.common.monitor import Monitor_custom
 from sb3_custom.ppo_mask.ppo_mask import MaskablePPO_custom
 from stable_baselines3.common.logger import Logger
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
-from utils import Capturing, check_bool_or_float, check_bool_or_int, load_conf, timer
+from utils import Capturing, check_bool_or_float, check_bool_or_int, timer
 
 
 def agent_training_outputs(
@@ -259,10 +260,10 @@ def env_monitor_outputs(
 
 def maskablePPO_train(
     env: gym.Env,
+    ppo_cfg: dict[str, Any],
     verbose: bool = False,
     use_masking: bool = True,
     monitor_train: bool = True,
-    cfg_path: str = "./config.toml",
     path_out: Path = Path("./models/maskedppo"),
     **env_kwargs,
 ) -> tuple[MaskablePPO, float, int, float | None]:
@@ -275,6 +276,8 @@ def maskablePPO_train(
     ----------
     env : gym.Env
         Gym environment where the agent will be trained.
+    ppo_cfg : dict[str, Any], optional
+        Dictionary with PPO training config.
     hp_optimization : bool
         True to optimize training hiperparameters using Optuna.
     verbose : bool, optional
@@ -284,8 +287,6 @@ def maskablePPO_train(
     monitor_train : bool, optional
         Monitor training and save monitorization data and plots. It will be
         saved in the same folder than the trained agent.
-    cfg_path : str, optional
-        Path to config file, by default "./config.toml".
     path_out : Path, optional
         Path where the trained agent and monitor plots/csv will be saved, by
         default Path("./models/maskedppo").
@@ -325,9 +326,8 @@ def maskablePPO_train(
     .. [8] https://optuna.readthedocs.io/en/stable/faq.html#how-can-i-obtain-reproducible-optimization-results
     .. [9] https://optuna.readthedocs.io/en/stable/faq.html#how-are-exceptions-from-trials-handled
     .. [10] https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecenv-api-vs-gym-api
+    .. [11] https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#custom-networks
     """
-    ppo_cfg = load_conf(cfg_path)["agent"]["PPO"]
-
     # store params not to be optimized for training
     int_params = ["n_steps", "batch_size", "n_epochs"]
     float_params = ["learning_rate", "gamma", "gae_lambda", "ent_coef"]
@@ -400,6 +400,7 @@ def maskablePPO_train(
                 policy="MlpPolicy",
                 env=agent_env,
                 verbose=0,
+                policy_kwargs={"net_arch": ppo_cfg.get("net_arch")},  # [11]
                 seed=ppo_cfg["seed"],
                 _init_setup_model=True,
                 **trial_params,
@@ -489,6 +490,7 @@ def maskablePPO_train(
             policy="MlpPolicy",
             env=monitored_env,
             verbose=2 if verbose else 1,
+            policy_kwargs={"net_arch": ppo_cfg.get("net_arch")},  # [11]
             seed=ppo_cfg["seed"],
             _init_setup_model=True,
             **train_params,
