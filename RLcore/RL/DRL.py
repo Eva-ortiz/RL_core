@@ -12,7 +12,14 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from environment import Action, Reward, Setup_mode, State, State_norm, call_method_or_attr_of_envs
+from environment import (
+    Action,
+    Reward,
+    Setup_mode,
+    State,
+    State_norm,
+    call_method_or_attr_of_envs,
+)
 from RL.basics import agent
 from RL.plots import learning_curve, save_fig_df
 from sb3_contrib.common.maskable.utils import get_action_masks
@@ -478,19 +485,27 @@ class DRL_agent(agent):
         idx_envs_list = list(range(n_envs))
 
         # check input initial action
-        if n_envs == 0 and (initial_action is not None and not isinstance(initial_action, Action)):
-            raise ValueError(f"Just one initial action must be provided with dtype {Action}.")
+        if n_envs == 0 and (
+            initial_action is not None and not isinstance(initial_action, Action)
+        ):
+            raise ValueError(
+                f"Just one initial action must be provided with dtype {Action}."
+            )
 
         elif n_envs > 0:
             # check vectorized inputs if VecEnv
-            if not isinstance(initial_action, np.ndarray) or not isinstance(initial_state, np.ndarray):
+            if not isinstance(initial_action, np.ndarray) or not isinstance(
+                initial_state, np.ndarray
+            ):
                 raise ValueError(
                     """Array of actions and states must be provided if working with
                     vectorized environments."""
                 )
 
             # check coherence between state inputs
-            state_norm_bool = np.array(list(map(isinstance, initial_state, [State_norm] * n_envs)))
+            state_norm_bool = np.array(
+                list(map(isinstance, initial_state, [State_norm] * n_envs))
+            )
             if not (state_norm_bool == state_norm_bool[0]).all():
                 raise ValueError(
                     """Vector of initial states with incoherent dtypes. Please,
@@ -545,7 +560,9 @@ class DRL_agent(agent):
                 )
 
             # store visited states
-            visited_states_norm.update(tuple(map(tuple, state_norm)))  # solve not hashable
+            visited_states_norm.update(
+                tuple(map(tuple, state_norm))
+            )  # solve not hashable
 
             # if action masking, check env action masks [1]
             action_masks = get_action_masks(environment) if use_masking else None
@@ -566,7 +583,9 @@ class DRL_agent(agent):
                 if n_envs <= 1:
                     action_idx = non_none_action_idx
                 else:
-                    action_idx[action_idxs_none] = np.array(non_none_action_idx)[action_idxs_none]
+                    action_idx[action_idxs_none] = np.array(non_none_action_idx)[
+                        action_idxs_none
+                    ]
 
             # observe response of the environment
             env_step_out = environment.step(action_idx)
@@ -763,12 +782,14 @@ class DRL_agent(agent):
         ..[1] https://pytorch.org/docs/stable/generated/torch.max.html#torch.max
         """
         # check if dimensions and number of environments are consistent
-        assert len(state_norm.shape) == len(action_masks.shape), (
-            "Inconsistent `state_norm`/`action_masks` dimensions."
-        )
+        assert len(state_norm.shape) == len(
+            action_masks.shape
+        ), "Inconsistent `state_norm`/`action_masks` dimensions."
         assert 2 >= len(state_norm.shape) >= 1, "Inconsistent state dimensions."
         if len(state_norm.shape) > 1:
-            assert state_norm.shape[0] == action_masks.shape[0], "Inconsistent number of environments."
+            assert (
+                state_norm.shape[0] == action_masks.shape[0]
+            ), "Inconsistent number of environments."
 
         # check if we are in the vectorized case or not
         n_envs = 0 if len(state_norm.shape) == 1 else state_norm.shape[0]
@@ -780,7 +801,9 @@ class DRL_agent(agent):
             # training to avoid a Pytorch `RuntimeError`
             # It is necessary to set input as float32 so Pythorch does not return us
             # a `RuntimeError` due dtypes
-            q_values = q_net.forward(torch.from_numpy(state_norm.astype(np.float32)).to(device))
+            q_values = q_net.forward(
+                torch.from_numpy(state_norm.astype(np.float32)).to(device)
+            )
 
             # change related to invalid action masking
             if action_masks is not None:
@@ -801,7 +824,9 @@ class DRL_agent(agent):
             try:
                 epsilon = kwargs["epsilon"]
             except KeyError as err:
-                raise ValueError("Epsilon of epsilon greedy policy not provided.") from err
+                raise ValueError(
+                    "Epsilon of epsilon greedy policy not provided."
+                ) from err
 
             rand = self.random_rng.uniform(0, 1)
 
@@ -821,7 +846,8 @@ class DRL_agent(agent):
                     env_indexes, unmasked_actions_idxs = np.nonzero(action_masks)
                     # store in a convenient way valid actions idxs for each env
                     valid_actions = [
-                        unmasked_actions_idxs[env_indexes == env_idx] for env_idx in range(n_envs)
+                        unmasked_actions_idxs[env_indexes == env_idx]
+                        for env_idx in range(n_envs)
                     ]
                     # check we preserve the number of environments in valid actions list
                     assert len(valid_actions) == n_envs
@@ -832,7 +858,9 @@ class DRL_agent(agent):
             else:
                 # change related to invalid action masking
                 valid_actions = (
-                    np.nonzero(action_masks)[0].tolist()  # actions idx: native python dtypes
+                    np.nonzero(action_masks)[
+                        0
+                    ].tolist()  # actions idx: native python dtypes
                     if action_masks is not None
                     else range(len(self.actions))
                 )
@@ -840,7 +868,9 @@ class DRL_agent(agent):
                 valid_actions = np.expand_dims(valid_actions, axis=0)
 
             # select an action idx per environment among valid actions per env
-            action_idx = [self.random_rng.choice(env_actions) for env_actions in valid_actions]
+            action_idx = [
+                self.random_rng.choice(env_actions) for env_actions in valid_actions
+            ]
 
         # select the action with a greedy policy
         else:
@@ -855,7 +885,9 @@ class DRL_agent(agent):
 
                 # store the max actions indexes
                 max_action_idxs = [
-                    idx for idx, q_value in enumerate(q_values[env_idx]) if q_value == max_val[env_idx]
+                    idx
+                    for idx, q_value in enumerate(q_values[env_idx])
+                    if q_value == max_val[env_idx]
                 ]
 
                 # select randomly the action between actions which presents the
@@ -1137,7 +1169,9 @@ class DRL_agent(agent):
             environment.set_options(options=reset_options)
             initial_batch_state_norm = environment.reset()
         else:
-            initial_batch_state_norm, _ = environment.reset(seed=self.seed, options=reset_options)
+            initial_batch_state_norm, _ = environment.reset(
+                seed=self.seed, options=reset_options
+            )
 
         # select to store a' only for Sarsa algorithm
         follow_next_action = self.algorithm == "Sarsa"
@@ -1200,7 +1234,9 @@ class DRL_agent(agent):
                 # Additionally, execute the forward pass at the same device we
                 # are using for training to avoid a Pytorch `RuntimeError`.
                 estimated_q_values = q_net.forward(
-                    torch.from_numpy(experience.state_norm.astype(np.float32)).to(device)
+                    torch.from_numpy(experience.state_norm.astype(np.float32)).to(
+                        device
+                    )
                 )
                 batch_estimations.append(estimated_q_values[experience.action_idx])
 
@@ -1214,7 +1250,9 @@ class DRL_agent(agent):
                         # 1- obtain the action-state values for all actions from
                         # `next_state_norm`
                         next_q_values = q_net.forward(
-                            torch.from_numpy(experience.next_state_norm.astype(np.float32)).to(device)
+                            torch.from_numpy(
+                                experience.next_state_norm.astype(np.float32)
+                            ).to(device)
                         )
                         # 2- get action value with selected next_action index
                         next_q_value = next_q_values[experience.next_action_idx]
@@ -1234,7 +1272,8 @@ class DRL_agent(agent):
                         # use the action value of the next action (Sarsa, Q-learning)
                         # Set reward tensor to avoid a Pytorch `RuntimeError`
                         target_q_value = torch.squeeze(
-                            torch.Tensor([experience.reward]).to(device) + discount_rate * next_q_value
+                            torch.Tensor([experience.reward]).to(device)
+                            + discount_rate * next_q_value
                         )
 
                     batch_targets.append(target_q_value)
@@ -1242,7 +1281,9 @@ class DRL_agent(agent):
             # get the loss of the action value to update in the q net
             # detach indicates to not follow the gradient for the target, as it
             # implies the use of the q net too
-            loss = loss_L1(torch.stack(batch_estimations), torch.stack(batch_targets).detach())
+            loss = loss_L1(
+                torch.stack(batch_estimations), torch.stack(batch_targets).detach()
+            )
 
             # Update the network
             optimizer.zero_grad()  # Reset the gradients an usual practice
@@ -1366,14 +1407,18 @@ class DRL_agent(agent):
 
         # output info about network number of layers and neurons inside them
         inputs_nd_n_neurons = [
-            (weights.shape[1], weights.shape[0]) for key, weights in w_and_b.items() if "weight" in key
+            (weights.shape[1], weights.shape[0])
+            for key, weights in w_and_b.items()
+            if "weight" in key
         ]
         logging.info(
             """Loaded neural network with the following architecture (input
             layer not included):"""
         )
         for n_layer, shapes in enumerate(inputs_nd_n_neurons):
-            logging.info(f"\tLayer {n_layer} with {shapes[0]} inputs and {shapes[1]} neurons")
+            logging.info(
+                f"\tLayer {n_layer} with {shapes[0]} inputs and {shapes[1]} neurons"
+            )
 
     def _update_reward_curves(
         self,
@@ -1552,7 +1597,9 @@ class DRL_agent(agent):
 
         # save the created figure
         fig.savefig(ep_len_save_path, bbox_inches="tight", dpi=800)
-        save_fig_df(ep_len_save_path, x=iterations, y=performance, xlabel=xlabel, ylabel=ylabel)
+        save_fig_df(
+            ep_len_save_path, x=iterations, y=performance, xlabel=xlabel, ylabel=ylabel
+        )
 
 
 class DQN_agent(DRL_agent):
@@ -1615,7 +1662,9 @@ class DQN_agent(DRL_agent):
         memory_size: int = 10000,
         n_batch_per_step: int = 4,
         n_new_experiences_per_step: int = 1,
-        target_estimation_mode: Literal["regular", "target network", "double"] = "double",
+        target_estimation_mode: Literal[
+            "regular", "target network", "double"
+        ] = "double",
         n_steps_for_target_net_update: int = 1000,
         **kwargs,
     ):
@@ -1722,7 +1771,9 @@ class DQN_agent(DRL_agent):
             environment.set_options(options=reset_options)
             initial_batch_state_norm = environment.reset()
         else:
-            initial_batch_state_norm, _ = environment.reset(seed=self.seed, options=reset_options)
+            initial_batch_state_norm, _ = environment.reset(
+                seed=self.seed, options=reset_options
+            )
 
         # -------------------------------------------------------------------------
         # Step 0: define the NN of the Q function
@@ -1835,7 +1886,9 @@ class DQN_agent(DRL_agent):
                 assert pd.Series(last_experiences.keys()).isin(idx_envs_list).all()
                 # make sure last experiences are stored in the desired order
                 # (this is, by environment idx)
-                next_state_norm = np.array([last_experiences[env_idx] for env_idx in idx_envs_list])
+                next_state_norm = np.array(
+                    [last_experiences[env_idx] for env_idx in idx_envs_list]
+                )
 
             # generate selected number of new experiences
             new_experiences, _, _, _, _, last_episode_lengths, experiences_info = (
@@ -1887,7 +1940,9 @@ class DQN_agent(DRL_agent):
                     # Additionally, execute the forward pass at the same device we
                     # are using for training to avoid a Pytorch `RuntimeError`.
                     estimated_q_values = q_net.forward(
-                        torch.from_numpy(experience.state_norm.astype(np.float32)).to(device)
+                        torch.from_numpy(experience.state_norm.astype(np.float32)).to(
+                            device
+                        )
                     )
                     batch_estimations.append(estimated_q_values[experience.action_idx])
 
@@ -1913,7 +1968,9 @@ class DQN_agent(DRL_agent):
                         if target_estimation_mode == "double":
                             # all `q_net_target` q values from next state
                             target_net_q_values = q_net_target.forward(
-                                torch.from_numpy(experience.next_state_norm.astype(np.float32)).to(device)
+                                torch.from_numpy(
+                                    experience.next_state_norm.astype(np.float32)
+                                ).to(device)
                             )
                             # select next q value form target network with
                             # greedy action from trained network
@@ -1923,7 +1980,8 @@ class DQN_agent(DRL_agent):
                         # use the action value of the next action (Sarsa, Q-learning)
                         # Set reward tensor to avoid a Pytorch `RuntimeError`
                         target_q_value = torch.squeeze(
-                            torch.Tensor([experience.reward]).to(device) + discount_rate * next_q_value
+                            torch.Tensor([experience.reward]).to(device)
+                            + discount_rate * next_q_value
                         )
 
                         batch_targets.append(target_q_value)
@@ -1939,7 +1997,9 @@ class DQN_agent(DRL_agent):
                 # get the loss of the action value to update in the q net
                 # detach indicates to not follow the gradient for the target, as it
                 # implies the use of the q net too
-                loss = loss_L1(torch.stack(batch_estimations), torch.stack(batch_targets).detach())
+                loss = loss_L1(
+                    torch.stack(batch_estimations), torch.stack(batch_targets).detach()
+                )
 
                 # Update the network
                 optimizer.zero_grad()  # Reset the gradients as usual practice
