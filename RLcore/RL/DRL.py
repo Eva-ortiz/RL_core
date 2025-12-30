@@ -150,7 +150,7 @@ class DRL_agent(agent):
         self,
         algorithm: Literal["Sarsa", "Q-learning", "double_Q-learning"],
         actions: np.typing.ArrayLike,
-        save_folder: str = "DRL_results",
+        save_folder: str = "DRL_out",
         seed: int | None = None,
         verbose: bool = False,
         **kwargs,
@@ -171,7 +171,7 @@ class DRL_agent(agent):
             Collection of all possible actions of the problem.
         save_folder : str, optional
             Default name of the save folder for the outputs of the algorithm.
-            By default, "DRL_outputs"
+            By default, "DRL_out"
         seed : int | None, optional
             Seed for the pseudo random generators
         verbose : bool, optional
@@ -1156,7 +1156,7 @@ class DRL_agent(agent):
         if save_q_net:  # [1]
             torch.save(
                 q_net.state_dict(),
-                f"./data/{self.save_folder}/q_net_{in_dim}_inputs.pt",
+                f"./models/{self.save_folder}/q_net_{in_dim}_inputs.pt",
             )
 
         # -------------------------------------------------------------------------
@@ -1194,7 +1194,7 @@ class DRL_agent(agent):
         )
 
         # load weights and biases
-        w_and_b = torch.load(f"./data/{save_folder}/q_net_{in_dim}_inputs.pt")
+        w_and_b = torch.load(f"./models/{save_folder}/q_net_{in_dim}_inputs.pt")
         # load weights and biases into created neural network object
         # employ `w_and_b` for the net before any operation to avoid consuming
         # the iterable
@@ -1846,7 +1846,7 @@ class DQN_agent(DRL_agent):
         if save_q_net:  # [1]
             torch.save(
                 q_net.state_dict(),
-                f"./data/{self.save_folder}/q_net_{in_dim}_inputs.pt",
+                f"./models/{self.save_folder}/q_net_{in_dim}_inputs.pt",
             )
 
         # -------------------------------------------------------------------------
