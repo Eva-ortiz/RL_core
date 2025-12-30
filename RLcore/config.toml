@@ -95,3 +95,7 @@ total_timesteps = 1e4
 # optuna
 seed_optuna = 0
 n_trials = 20
+
+[agent.PPO.net_arch] # delete for default architecture
+pi = [128, 64, 48]
+vf = [128, 64, 48]

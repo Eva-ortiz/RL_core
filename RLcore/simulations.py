@@ -47,16 +47,17 @@ def maskedPPO_agent(
     """
     # ------ INIT DATA ------
     start_env = "TODO : Environment"
+    ppo_cfg = load_conf(conf_path)["agent"]["PPO"]
 
     # ------ TRAIN ------
     if train:
         logging.info("Training...")
         _, t_train, n_expl_episodes, t_optuna = maskablePPO_train(
             env=env,
+            ppo_cfg=ppo_cfg,
             verbose=verbose,
             use_masking=use_masking,
             monitor_train=monitor_train,
-            cfg_path=conf_path,
             path_out=model_path,
             **env_kwargs,
         )
