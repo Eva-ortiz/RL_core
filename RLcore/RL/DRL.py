@@ -619,7 +619,6 @@ class DRL_agent(agent):
                         for env_idx in idx_envs_list
                     ]
                 )
-
             # store sarsa transition if track_next_action is selected
             else:
                 # perform next action too
@@ -738,7 +737,7 @@ class DRL_agent(agent):
             We can select:
                 * "greedy" actions
                 * "epsilon_greedy" actions
-        state_norm:  np.ndarray[State_norm] | State_norm
+        state_norm: np.ndarray[State_norm] | State_norm
             Normalized state where the agent currently is.
         q_net : QNN
             Network for the prediction of all action-state values for a given
@@ -747,7 +746,6 @@ class DRL_agent(agent):
             Currently used device for training.
         action_masks : np.ndarray[np.ndarray[bool]] | np.ndarray[bool] | None, optional
             Action mask, by default None, so do not apply masking.
-
         **kwargs
             epsilon : float
                 Value of epsilon in epsilon greedy policy. With higher
@@ -1573,7 +1571,7 @@ class DRL_agent(agent):
         performance = episodes_lengths
         iterations = list(range(len(episodes_lengths)))
         ylabel, xlabel = "Experiences", "Episode"
-        ep_len_save_path = f"./img/{self.save_folder}/episode_len_learning_curve.png"
+        ep_len_save_path = f"./{self.save_folder}/episode_len_learning_curve.png"
 
         # plot
         fig, ax = plt.subplots(figsize=(8, 5))
