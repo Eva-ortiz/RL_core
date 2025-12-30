@@ -445,6 +445,10 @@ class DRL_agent(agent):
           case, a restart of the environment will be done.
         * Decorrelated transitions are given through random sampling of states.
           Several authors recommend this practice.
+
+        References
+        ----------
+        ..[1] https://github.com/Stable-Baselines-Team/stable-baselines3-contrib/blob/master/sb3_contrib/ppo_mask/ppo_mask.py#L227
         """
         # check input initial action
         if initial_action is not None and not isinstance(initial_action, Action):
