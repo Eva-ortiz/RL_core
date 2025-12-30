@@ -9,6 +9,7 @@ import numpy as np
 import optuna
 import pandas as pd
 from agent_predict import maskablePPO_episode
+from environment import call_method_or_attr_of_envs
 from sb3_contrib import MaskablePPO
 from sb3_custom.common.env_util import make_vec_env_custom
 from sb3_custom.common.monitor import Monitor_custom
@@ -214,10 +215,8 @@ def env_monitor_outputs(
         # get actions, rewards, return, number of experiences and runtime of
         # each episode
         for var in episode_vars_nd_labels:
-            episode_records[var] = (
-                monitored_env.env_method(f"get_{var}")[n_env]
-                if isinstance(monitored_env, VecEnv)
-                else getattr(monitored_env, f"get_{var}")()
+            episode_records[var] = call_method_or_attr_of_envs(
+                env=monitored_env, method_name=f"get_{var}", env_to_call=n_env
             )
             # assert all records have the same number of values
             assert len(episode_records[var]) == len(list(episode_records.values())[0])

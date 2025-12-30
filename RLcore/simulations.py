@@ -8,9 +8,12 @@ import gymnasium as gym
 import torch
 from agent_predict import maskablePPO_episode
 from agent_train import maskablePPO_train
+from environment import call_method_or_attr_of_envs
 from global_vars import WORKING_DIR
 from RL.DRL import DQN_agent, DRL_agent  # noqa E402
 from sb3_contrib import MaskablePPO
+from sb3_custom.common.env_util import make_vec_env_custom
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from utils import load_conf, set_logging, timer
 
 # for HPC, specify the path to import from our modules
@@ -200,13 +203,33 @@ def approximated_simulation(
         # store start time of the program
         start_time = time.time()
 
-        # create the RHT environment
-        train_env = env(**env_kwargs)
+        # wrap and initialize the environment
+        if cfg_hiperpar["n_envs"] == 0:
+            # ... to be monitored
+            train_env = env(**env_kwargs)
+
+        else:
+            # ...to be vectorized and monitored
+            train_env = make_vec_env_custom(
+                env,
+                env_kwargs=env_kwargs,
+                seed=seed,
+                n_envs=cfg_hiperpar["n_envs"],
+                vec_env_cls=SubprocVecEnv
+                if cfg_hiperpar["env_multiprocess"]
+                else DummyVecEnv,
+            )
+        # initialize a different environment to be employed for inner
+        # simulations during training
+        env_upd_curves = env(**env_kwargs)
 
         # create the new agent with selected algorithm
+        _, actions = call_method_or_attr_of_envs(
+            env=train_env, attr_name="_action_buoyid_dict", env_to_call=0
+        )
         agent = agent_class(
             algorithm=algorithm,
-            actions=list(train_env._action_name_dict.values()),
+            actions=list((actions[0]).values()),
             save_folder=model_path,
             verbose=verbose,
             hidden_layers=cfg_hiperpar["hidden_layers"],
@@ -216,6 +239,7 @@ def approximated_simulation(
         agent.train(
             device=device,
             environment=train_env,
+            env_upd_curves=env_upd_curves,
             plot_learning_curves=monitor_train,
             save_q_net=True,
             reward_curve_mode=cfg_env["plots"]["reward_curve_mode"],

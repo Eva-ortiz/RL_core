@@ -5,6 +5,7 @@ from typing import Any, Literal
 import gymnasium as gym
 import numpy as np
 import pandas as pd
+from stable_baselines3.common.vec_env import VecEnv
 from typer import Typer
 from utils import load_conf
 
@@ -37,6 +38,102 @@ class Setup_mode(StrEnum):
     RESET = "reset"
 
 
+def call_method_or_attr_of_envs(
+    env: gym.Env | VecEnv,
+    method_name: str | None = None,
+    attr_name: str | None = None,
+    env_to_call: list[int] | int | None = None,
+    kwargs_per_env: dict[str, dict[str | Any]] | None = None,
+    **method_kwargs,
+) -> tuple[list[Any] | None, list[Any] | None]:
+    """Call a method of envs inside an vectorized environment.
+
+    Also perform the call in case of a non vectorized environment.
+
+    Parameters
+    ----------
+    vecEnv : VecEnv
+        Vectorized environment.
+    method_name : str | None, optional
+        The name of the environment method to invoke.
+    attr_name : str | None, optional
+        The name of the environment attribute to invoke.
+    method_kwargs : dict | None
+        Any keyword arguments to provide in the call.
+    env_to_call : list[int] | int | None, optional
+        Indices of envs whose method to call.
+    kwargs_per_env : dict[str, dict[str | Any]] | None, optional
+        Dictionary with different kwargs per environment, if proceeds.
+        Pay attention to kwargs input, as they must have f"env{n_envs}_kwargs"
+        keys as follows:
+            >>> {
+            >>> "env0_kwargs" : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
+            >>> kwarg1_val, ...},
+            >>> "env1_kwargs" : {"kwarg0_name" : kwarg0_val, "kwarg1_name" :
+            >>> kwarg1_val, ...},
+            >>> ...}
+        Starting from 0 index!
+        If applied, `method_kwargs` won´t be empolyed.
+
+    Returns
+    -------
+    list[Any] | None
+        List of items returned by the environment’s method call
+    list[Any] | None
+        List of values of ‘attr_name’ in all environments
+
+    References
+    ----------
+    .. [1] https://stable-baselines.readthedocs.io/en/master/guide/vec_envs.html#stable_baselines.common.vec_env.VecEnv.env_method
+    """
+    if isinstance(env, VecEnv):
+        if method_name is None:
+            method_return = None
+        else:
+            if kwargs_per_env is None:
+                method_return = env.env_method(
+                    method_name=method_name, indices=env_to_call, **method_kwargs
+                )
+            else:
+                # make sure method_kwargs are not expected to be applied
+                if method_kwargs:
+                    raise ValueError(
+                        "If `kwargs_per_env` provided, kwargs input not applied."
+                    )
+
+                # check kwargs format if kwargs per environment provided
+                expected_keys = [
+                    f"env{env_idx}_kwargs" for env_idx in range(env.num_envs)
+                ]
+                if not all(list(kwargs_per_env.keys()) == expected_keys):
+                    raise ValueError(
+                        f"Unexpected keys of `method_kwargs`, expected: {expected_keys}"
+                    )
+
+                # get method return per environment
+                method_return = [
+                    env.env_method(
+                        method_name=method_name,
+                        indices=env_idx,
+                        **kwargs_per_env[expected_keys[env_idx]],
+                    )
+                    for env_idx in range(env.num_envs)
+                ]
+
+        attr_return = (
+            None if attr_name is None else env.get_attr(attr_name, indices=env_to_call)
+        )
+    else:
+        method_return = (
+            None
+            if method_name is None
+            else [getattr(env, method_name)(**method_kwargs)]
+        )
+        attr_return = None if attr_name is None else [getattr(env, attr_name)]
+
+    return method_return, attr_return
+
+
 class ENV(gym.Env):  # type: ignore[type-arg]
     """Custom Environment that follows Gymnasium interface.
 
@@ -56,6 +153,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     .. [9] https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
     .. [10] https://www.gymlibrary.dev/content/environment_creation/#reset
     .. [11] https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
+
+    .. [12] https://github.com/Stable-Baselines-Team/stable-baselines3-contrib/issues/49
     """
 
     # relevant metadata storage
@@ -401,8 +500,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
     def action_masks(self) -> list[bool]:
         """Invalid action masking [OPTIONAL BEHAVIOR].
 
-        Intended for Maskable PPO implementation of Stable Baselines3 - Contrib.
-        [9]
+        Intended for Maskable PPO implementation of Stable Baselines3 - Contrib
+        and now for our implementation of Sarsa, Deep Q-Learning and double Deep
+        Q-Learning algorithms.
+        [9, 12]
 
         Returns
         -------

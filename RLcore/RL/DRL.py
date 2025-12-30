@@ -8,13 +8,22 @@ from typing import Any, Literal
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from environment import ENV, Action, Reward, Setup_mode, State, State_norm
+from environment import (
+    Action,
+    Reward,
+    Setup_mode,
+    State,
+    State_norm,
+    call_method_or_attr_of_envs,
+)
 from RL.basics import agent
 from RL.plots import learning_curve, save_fig_df
 from sb3_contrib.common.maskable.utils import get_action_masks
+from stable_baselines3.common.vec_env import VecEnv
 
 transition = namedtuple(
     "transition",
@@ -25,6 +34,7 @@ transition = namedtuple(
         "reward",
         "next_state_norm",
         "next_action_masks",
+        "env_idx",
     ),
 )
 sarsa_transition = namedtuple(
@@ -37,6 +47,7 @@ sarsa_transition = namedtuple(
         "next_state_norm",
         "next_action_masks",
         "next_action_idx",
+        "env_idx",
     ),
 )
 
@@ -63,10 +74,15 @@ class ReplayMemory:
 
         When `capacity` is reached, `deque` iterator automatically remove older
         elements when new ones are appended. [2]
+
+        Notes
+        -----
+        * Currently, we address saving `visited_states_norm` of vectorized
+          environments.
         """
         for experience in experiences:
             self.memory.append(experience)
-            self.visited_states_norm.add(tuple(experience.state_norm))
+            self.visited_states_norm.update(experience.state_norm)
 
     def sample(self, batch_size, random_rng):
         """Sample `batch_size` stored experiences.
@@ -144,6 +160,8 @@ class DRL_agent(agent):
     References
     ----------
     .. [1] https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+    .. [2] https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html
+    .. [3] https://stable-baselines.readthedocs.io/en/master/guide/vec_envs.html#stable_baselines.common.vec_env.VecEnv.step
     """
 
     def __init__(
@@ -202,7 +220,7 @@ class DRL_agent(agent):
     def greedy_simulation(
         self,
         q_net: QNN,
-        env: ENV,
+        env: gym.Env,
         max_steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
@@ -222,7 +240,7 @@ class DRL_agent(agent):
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
-        env : ENV
+        env : gym.Env
             Environment object of the problem, reset to perform the simulation.
         max_steps : int
             Maximum number of steps of the simulation. If `end_episode` reached,
@@ -280,7 +298,7 @@ class DRL_agent(agent):
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
             # if action masking, check env action masks
-            action_masks = get_action_masks(env) if use_masking else None
+            action_masks = np.array(get_action_masks(env)) if use_masking else None
 
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
@@ -333,13 +351,13 @@ class DRL_agent(agent):
 
     def _experience_generation(
         self,
-        n_experiences: int,
+        n_experiences_per_env: int,
         q_net: QNN,
-        environment: ENV,
+        environment: gym.Env | VecEnv,
         device: Literal["cuda", "mps", "cpu"],
         epsilon: float,
-        initial_state: State | State_norm,
-        initial_action: Action | None,
+        initial_state: np.ndarray[State | State_norm] | State | State_norm,
+        initial_action: np.ndarray[Action | None] | Action | None,
         follow_next_action: bool = False,
         decorrelated: bool = False,
         use_masking: bool = False,
@@ -360,23 +378,30 @@ class DRL_agent(agent):
 
         Parameters
         ----------
-        n_experiences : int
-            Number of experiences to generate.
+        n_experiences_per_env : int
+            Number of experiences to generate PER ENVIRONMENT. This means that,
+            if we select `N` experiences, we will store `N * n_envs` experiences.
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
-        environment : ENV
-            Environment object of the problem.
+        environment : gym.Env | VecEnv
+            Environment object of the problem. If vectorized, stack multiple
+            independent environments generating experiences in a parallelized
+            manner. [2]
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
         epsilon : float
             Value of epsilon in epsilon greedy policy. With higher
             epsilon, more exploratory behaviour of the policy.
-        initial_state : State | State_norm
+        initial_state : np.ndarray[State | State_norm] | State | State_norm
             State to initialize the generation of experiences from.
-        initial_action : Action | None
+            If vectorized environment, an array must be provided with the
+            initial state per env.
+        initial_action : np.ndarray[Action | None] | Action | None
             First action index. If None, select an action according to
             epsilon_greedy behaviour policy.
+            If vectorized environment, an array must be provided with the
+            initial action index per env.
         follow_next_action : bool, optional
             Select to store and follow a' along all experiencies generation.
             By default, False.
@@ -391,16 +416,17 @@ class DRL_agent(agent):
             reset_options : dict, optional
                 Additional information to specify how the environment is reset
                 (depending on the specific environment). By default, None.
-            episode_length : int
-                Track of episode length, useful when input environment has
-                already taken few steps but did not reach a terminal state.
-                If not provided, it is assumed to be 0.
+            episode_lengths : np.ndarray[int]
+                Track of episode length(s), useful when input environment has
+                already taken few steps but did not reach a terminal state. If
+                not provided, it is assumed to be [0]*n_envs.
 
         Returns
         -------
         experiences : list[namedtuple]
-            List which contains each one of the experiences, composed by
-            (state_norm, action_idx, reward, next_state_norm).
+            List which contains each one of the environments experiences,
+            composed by (state_norm, action_masks, action_idx, reward,
+            next_state_norm, next_action_masks).
             If follow_next_action, also include next_action_idx.
         visited_states_norm : tuple[State_norm]
             Tuple of visited states (normalized).
@@ -413,9 +439,9 @@ class DRL_agent(agent):
         last_next_action : Action | None
             Last action a' performed. Useful to continue the sequence of
             generated experiences.
-        episode_length : int
-            Current track of episode length, useful to continue from last
-            unfinished episode, this is, from last next_state.
+        episode_lengths : np.ndarray[int]
+            Current track of episode length(s), useful to continue from last
+            unfinished episode(s), this is, from last next_state(s).
         info : dict[str, Any]
             Additional info about experience generation, such as,
                 * episodes longitude: if decorrelated samples, it will always be
@@ -436,8 +462,8 @@ class DRL_agent(agent):
             methods are also crucial for the correct functioning of this
             experience generation.
         MaskablePPO.collect_rollouts
-            TODO : Method from `MaskablePPO` algorithm, reference to use
-            vectorized environments.
+            Method from `MaskablePPO` algorithm, reference to use vectorized
+            environments.
 
         Notes
         -----
@@ -445,23 +471,70 @@ class DRL_agent(agent):
           case, a restart of the environment will be done.
         * Decorrelated transitions are given through random sampling of states.
           Several authors recommend this practice.
+        * Currently, we do not distinguish
+          `reached_states`/`visited_states_norm` among the vectorized
+          environments.
 
         References
         ----------
         ..[1] https://github.com/Stable-Baselines-Team/stable-baselines3-contrib/blob/master/sb3_contrib/ppo_mask/ppo_mask.py#L227
         """
+        # ----------- INITIAL CHECKS -----------
+        # check number of envs
+        n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+        idx_envs_list = list(range(n_envs))
+
         # check input initial action
-        if initial_action is not None and not isinstance(initial_action, Action):
+        if n_envs == 0 and (
+            initial_action is not None and not isinstance(initial_action, Action)
+        ):
             raise ValueError(
                 f"Just one initial action must be provided with dtype {Action}."
             )
 
+        elif n_envs > 0:
+            # check vectorized inputs if VecEnv
+            if not isinstance(initial_action, np.ndarray) or not isinstance(
+                initial_state, np.ndarray
+            ):
+                raise ValueError(
+                    """Array of actions and states must be provided if working with
+                    vectorized environments."""
+                )
+
+            # check coherence between state inputs
+            state_norm_bool = np.array(
+                list(map(isinstance, initial_state, [State_norm] * n_envs))
+            )
+            if not (state_norm_bool == state_norm_bool[0]).all():
+                raise ValueError(
+                    """Vector of initial states with incoherent dtypes. Please,
+                    provide either all normalized or unnormalized states."""
+                )
+
+        # ----------- NORMALIZE INIT STATE -----------
         # obtain normalized state from initial state
-        state_norm = (
-            initial_state
-            if isinstance(initial_state, State_norm)
-            else environment._normalize_state_values(initial_state)
-        )
+        if n_envs == 0:
+            state_norm = (
+                initial_state
+                if isinstance(initial_state, State_norm)
+                else environment._normalize_state_values(initial_state)
+            )
+        else:
+            if all(state_norm_bool):  # all normalized
+                state_norm = initial_state
+            elif all(~state_norm_bool):  # all NOT normalized
+                state_norm, _ = call_method_or_attr_of_envs(
+                    env=environment,
+                    method_name="_normalize_state_values",
+                    env_to_call=idx_envs_list,
+                    kwargs_per_env={
+                        f"env{env_idx}_kwargs": {"state": initial_state[env_idx]}
+                        for env_idx in idx_envs_list
+                    },
+                )
+
+        # ----------- EXECUTE ENV STEPS -----------
         # set action as initial action
         action_idx = initial_action
 
@@ -471,30 +544,34 @@ class DRL_agent(agent):
         reached_states = set()
         info = {"episode_lengths": tuple()}
 
-        # TODO : obtain actions with vectorized environments, for ref see
-        # MaskablePPO.collect_rollouts
-        episode_length = kwargs.get("episode_length", 0)
-        for _ in range(n_experiences):
+        episode_lengths = kwargs.get("episode_lengths", np.tile(0, n_envs))
+        for _ in range(n_experiences_per_env):
             # if decorrelated selected, randomly select next state and set the
             # environment to this state
             if decorrelated:
                 # Reset the environment setting start env/state to None and
                 # current env to a random state. In addition, reset some
                 # counters.
-                state_norm = environment._setup(
-                    mode=Setup_mode.INIT, start_env="random"
+                state_norm = call_method_or_attr_of_envs(
+                    env=environment,
+                    method_name="_setup",
+                    mode=Setup_mode.INIT,
+                    start_env="random",
                 )
 
             # store visited states
-            visited_states_norm.add(tuple(state_norm))  # solve not hashable
+            visited_states_norm.update(
+                tuple(map(tuple, state_norm))
+            )  # solve not hashable
 
             # if action masking, check env action masks [1]
             action_masks = get_action_masks(environment) if use_masking else None
 
-            # if action has not been provided as input, choose action with
+            # if action(s) has not been provided as input, choose action with
             # behaviour policy
-            if action_idx is None:
-                action_idx, _, _ = self._act(
+            action_idxs_none = pd.isna(action_idx)
+            if action_idx is None or (action_idxs_none).any():
+                non_none_action_idx, _, _ = self._act(
                     "epsilon_greedy",
                     state_norm,
                     q_net=q_net,
@@ -502,22 +579,35 @@ class DRL_agent(agent):
                     epsilon=epsilon,
                     action_masks=action_masks,
                 )
+                # avoid indexing if just one environment
+                if n_envs <= 1:
+                    action_idx = non_none_action_idx
+                else:
+                    action_idx[action_idxs_none] = np.array(non_none_action_idx)[
+                        action_idxs_none
+                    ]
 
             # observe response of the environment
-            next_state_norm, reward, terminated, truncated, _ = environment.step(
-                action_idx
-            )
+            env_step_out = environment.step(action_idx)
+            # unpack step returns
+            if n_envs == 0:
+                next_state_norm, reward, terminated, truncated, _ = env_step_out
+            # if vectorized environment, step method just returns `dones`
+            else:
+                next_state_norm, reward, dones, _ = env_step_out
+
+            # ----------- STORE RELEVANT PRODUCTS -----------
             # add an step to episode length if not decorrelated samples
-            episode_length += 1 if not decorrelated else 0
+            episode_lengths += 1 if not decorrelated else 0
             # store reached states
-            reached_states.add(tuple(next_state_norm))
+            reached_states.update(tuple(map(tuple, next_state_norm)))
 
             # if action masking, check env action masks [1]
             next_action_masks = get_action_masks(environment) if use_masking else None
 
             # store the transition
             if not follow_next_action:
-                experiences.append(
+                experiences.extend(
                     transition(
                         state_norm,
                         action_masks,
@@ -526,8 +616,20 @@ class DRL_agent(agent):
                         next_state_norm,
                         next_action_masks,
                     )
+                    if n_envs == 0
+                    else [
+                        transition(
+                            state_norm[env_idx],
+                            action_masks[env_idx],
+                            action_idx[env_idx],
+                            reward[env_idx],
+                            next_state_norm[env_idx],
+                            next_action_masks[env_idx],
+                            env_idx,
+                        )
+                        for env_idx in idx_envs_list
+                    ]
                 )
-
             # store sarsa transition if track_next_action is selected
             else:
                 # perform next action too
@@ -541,7 +643,7 @@ class DRL_agent(agent):
                 )
 
                 # store next action in transition
-                experiences.append(
+                experiences.extend(
                     sarsa_transition(
                         state_norm,
                         action_masks,
@@ -551,30 +653,65 @@ class DRL_agent(agent):
                         next_action_masks,
                         next_action_idx,
                     )
+                    if n_envs == 0
+                    else [
+                        sarsa_transition(
+                            state_norm[env_idx],
+                            action_masks[env_idx],
+                            action_idx[env_idx],
+                            reward[env_idx],
+                            next_state_norm[env_idx],
+                            next_action_masks[env_idx],
+                            next_action_idx[env_idx],
+                            env_idx,
+                        )
+                        for env_idx in idx_envs_list
+                    ]
                 )
 
+            # ----------- NECESSARY RESETS -----------
             # consider the end of the episode or continue from next state
             state_norm, _ = (
                 environment.reset(options=kwargs.get("reset_options"))
-                if terminated or truncated
+                if n_envs == 0 and (terminated or truncated)
                 else (next_state_norm, _)
             )
+            # SB3 MANAGES ENV RESET FOR VECTORIZED [2]
+            #   When using vectorized environments, the environments are
+            #   automatically reset at the end of each episode.
+            #   Thus, the observation returned for the i-th environment when
+            #   done[i] is true will in fact be the first observation of the
+            #   next episode, not the last observation of the episode that has
+            #   just terminated.
+            #   You can access the “real” final observation of the terminated
+            #   episode—that is, the one that accompanied the done event
+            #   provided by the underlying environment—using the
+            #   terminal_observation keys in the info dicts returned by the
+            #   vecenv.
 
             # check the end of the episode also for episode length track
-            if terminated or truncated:
-                info["episode_lengths"] += (episode_length,)
-                episode_length = 0
+            if n_envs == 0 and (terminated or truncated):
+                info["episode_lengths"] += (episode_lengths[0],)
+                episode_lengths = np.array([0])
+            elif n_envs > 0 and any(dones):
+                info["episode_lengths"] += tuple(episode_lengths[dones])
+                episode_lengths[dones] = np.tile(0, n_envs)[dones]
 
             # If follow_next_action is selected, force reset action to None if
             # terminated or truncated has been reached. Otherwise, set action to
             # next_action.
             if follow_next_action:
-                action_idx = None if terminated or truncated else next_action_idx
+                if n_envs == 0:
+                    action_idx = None if (terminated or truncated) else next_action_idx
+                else:
+                    action_idx = next_action_idx
+                    if any(dones):
+                        action_idx[dones] = np.tile(None, n_envs)[dones]
 
             # set action to None once its input has been employed, so we do not
             # get stuck in the initial action for follow_next_action = False
             else:
-                action_idx = None
+                action_idx = None if n_envs == 0 else np.tile(None, n_envs)
 
         # output stored experiences, visited and reached states, in addition to
         # the final visited state and next action
@@ -584,22 +721,25 @@ class DRL_agent(agent):
             reached_states,
             state_norm,
             action_idx,
-            episode_length,
+            episode_lengths,
             info,
         )
 
     def _act(
         self,
         mode: Literal["greedy", "epsilon_greedy"],
-        state_norm: State_norm,
+        state_norm: np.ndarray[State_norm] | State_norm,
         q_net: QNN,
         device: Literal["cuda", "mps", "cpu"],
-        action_masks: np.ndarray[bool] | None = None,
+        action_masks: np.ndarray[np.ndarray[bool]] | np.ndarray[bool] | None = None,
         **kwargs,
-    ) -> tuple[int, float, str]:
+    ) -> tuple[list[int] | int, list[float] | float, list[str] | str]:
         """Return the action that the agent takes given an state.
 
         In other words, this is the application of the policy.
+        * If working with vectorized environments; `state_norm`, `action_masks`
+        and this function outputs will be contained in np.ndarrays and lists,
+        with one element per environment.
 
         Parameters
         ----------
@@ -608,16 +748,15 @@ class DRL_agent(agent):
             We can select:
                 * "greedy" actions
                 * "epsilon_greedy" actions
-        state_norm: State_norm
+        state_norm: np.ndarray[State_norm] | State_norm
             Normalized state where the agent currently is.
         q_net : QNN
             Network for the prediction of all action-state values for a given
             state.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
-        action_masks : np.ndarray[bool] | None, optional
+        action_masks : np.ndarray[np.ndarray[bool]] | np.ndarray[bool] | None, optional
             Action mask, by default None, so do not apply masking.
-
         **kwargs
             epsilon : float
                 Value of epsilon in epsilon greedy policy. With higher
@@ -625,8 +764,12 @@ class DRL_agent(agent):
 
         Returns
         -------
-        action_idx, q_value, action_label : tuple[int, float, str]
-            Index, value and label of the action taken by the agent.
+        action_idx : list[int] | int
+            Index of the action(s) taken by the agent.
+        q_value : list[float] | float
+            Value of the action(s) taken by the agent.
+        action_label : list[str] | str
+            Label of the action(s) taken by the agent.
 
         Warnings
         --------
@@ -638,9 +781,18 @@ class DRL_agent(agent):
         ----------
         ..[1] https://pytorch.org/docs/stable/generated/torch.max.html#torch.max
         """
+        # check if dimensions and number of environments are consistent
         assert len(state_norm.shape) == len(
             action_masks.shape
         ), "Inconsistent `state_norm`/`action_masks` dimensions."
+        assert 2 >= len(state_norm.shape) >= 1, "Inconsistent state dimensions."
+        if len(state_norm.shape) > 1:
+            assert (
+                state_norm.shape[0] == action_masks.shape[0]
+            ), "Inconsistent number of environments."
+
+        # check if we are in the vectorized case or not
+        n_envs = 0 if len(state_norm.shape) == 1 else state_norm.shape[0]
 
         # make sure we will not influence the q_network
         with torch.no_grad():
@@ -660,7 +812,7 @@ class DRL_agent(agent):
 
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
-        if len(self.actions) != q_values.shape[0]:
+        if len(self.actions) != q_values.shape[-1]:
             raise ValueError(
                 "Outputs of the `q_net` should correspond to the actions "
                 "stored in `self.actions`, even respecting the order."
@@ -687,40 +839,80 @@ class DRL_agent(agent):
 
         # select the action depending on a random number and epsilon value
         if epsilon > rand:
-            # change related to invalid action masking
-            valid_actions = (
-                np.nonzero(action_masks)[
-                    0
-                ].tolist()  # actions idx: native python dtypes
-                if action_masks is not None
-                else range(len(self.actions))
-            )
-            action_idx = self.random_rng.choice(valid_actions)
+            # change related to vectorized environments
+            if n_envs > 0:
+                if action_masks is not None:
+                    # get action mask indexes for each environment
+                    env_indexes, unmasked_actions_idxs = np.nonzero(action_masks)
+                    # store in a convenient way valid actions idxs for each env
+                    valid_actions = [
+                        unmasked_actions_idxs[env_indexes == env_idx]
+                        for env_idx in range(n_envs)
+                    ]
+                    # check we preserve the number of environments in valid actions list
+                    assert len(valid_actions) == n_envs
+                else:
+                    # select all actions indexes as valid actions for each env
+                    valid_actions = np.tile(range(len(self.actions)), (n_envs, 1))
+
+            else:
+                # change related to invalid action masking
+                valid_actions = (
+                    np.nonzero(action_masks)[
+                        0
+                    ].tolist()  # actions idx: native python dtypes
+                    if action_masks is not None
+                    else range(len(self.actions))
+                )
+                # expand valid actions dims to unify with several envs
+                valid_actions = np.expand_dims(valid_actions, axis=0)
+
+            # select an action idx per environment among valid actions per env
+            action_idx = [
+                self.random_rng.choice(env_actions) for env_actions in valid_actions
+            ]
 
         # select the action with a greedy policy
         else:
-            # store the max action value
-            max_val = torch.max(q_values)
+            action_idx, max_val = [], []
+            # encapsulate q_values in list to unify with several envs case
+            q_values = [q_values] if n_envs == 0 else q_values
 
-            # store the max actions indexes
-            max_action_idxs = [
-                idx for idx, q_value in enumerate(q_values) if q_value == max_val
-            ]
+            # iterate through one env when we are addressing non vectorized environment
+            for env_idx in range(max(n_envs, 1)):
+                # store the max action value
+                max_val.append(torch.max(q_values[env_idx]))
 
-            # select randomly the action between actions which presents the
-            # maximum value (so if there is a tie, `torch.max` do not take
-            # always the first action) [2]
-            action_idx = self.random_rng.choice(max_action_idxs)
+                # store the max actions indexes
+                max_action_idxs = [
+                    idx
+                    for idx, q_value in enumerate(q_values[env_idx])
+                    if q_value == max_val[env_idx]
+                ]
+
+                # select randomly the action between actions which presents the
+                # maximum value (so if there is a tie, `torch.max` do not take
+                # always the first action) [2]
+                action_idx.append(self.random_rng.choice(max_action_idxs))
 
         # get action value and label with selected index
-        action_val = q_values[action_idx]
-        action_label = self.actions[action_idx]
+        action_val, action_label = [], []
+        for env, action in enumerate(action_idx):
+            action_val.append(q_values[env][action])
+            action_label.append(self.actions[action])
 
-        # check if the action seected is the maximum value action with greedy
+        # check if the action selected is the maximum value action with greedy
         # behaviour
         if mode == "greedy":
-            assert max_val == action_val
+            assert (max_val == np.array(action_val)).all()
 
+        # retrieve value for single env, unpacking single element of list
+        if n_envs == 0:
+            [action_idx], [action_val], [action_label] = (
+                action_idx,
+                action_val,
+                action_label,
+            )
         return action_idx, action_val, action_label
 
     def _check_train_inputs(
@@ -758,7 +950,8 @@ class DRL_agent(agent):
     def train(
         self,
         device: Literal["cuda", "mps", "cpu"],
-        environment: gym.Env,
+        environment: gym.Env | VecEnv,
+        env_upd_curves: gym.Env,
         discount_rate: float = 0.99,
         lr: float = 0.1,
         epsilon: float = 1.0,
@@ -776,8 +969,12 @@ class DRL_agent(agent):
         ----------
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training. Used as an `act` method input.
-        environment : environment
+        environment : gym.Env | VecEnv
             Environment object of the problem.
+        env_upd_curves : gym.Env
+            Environment of the problem.
+            Independent of `environment` so simulations steps do not influence
+            over training environment. Strictly non vectorized.
         discount_rate : float, optional
             Discount rate factor for Reinforcement Learning algorithm.
             By default, 0.99
@@ -936,12 +1133,15 @@ class DRL_agent(agent):
         # Step 1: perform the training of the system
         # -------------------------------------------------------------------------
         # ------ INITIALIZATION ------
+        # check number of envs
+        n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+
         # initialize step count, amount of loss, storage of best reward seen
         # along all the training and episode length track
         step = 1
         loss = np.inf
         training_best_reward = -np.inf
-        episode_length = 0
+        episode_lengths = np.tile(0, n_envs)
 
         # initialize learning curves
         loss_curve = learning_curve()
@@ -963,13 +1163,15 @@ class DRL_agent(agent):
         # store visited states
         visited_states_norm = set()
 
-        # obtain episode start with reset method
-        env_norm_start_state, _ = environment.reset(
-            seed=self.seed, options=reset_options
-        )
-
-        # initialize batch state
-        initial_batch_state_norm = env_norm_start_state
+        # obtain episode start with reset method [2]
+        if isinstance(environment, VecEnv):
+            environment.seed(seed=self.seed)
+            environment.set_options(options=reset_options)
+            initial_batch_state_norm = environment.reset()
+        else:
+            initial_batch_state_norm, _ = environment.reset(
+                seed=self.seed, options=reset_options
+            )
 
         # select to store a' only for Sarsa algorithm
         follow_next_action = self.algorithm == "Sarsa"
@@ -992,7 +1194,7 @@ class DRL_agent(agent):
                 _,
                 last_batch_state_norm,
                 last_batch_action,
-                last_episode_length,
+                last_episode_lengths,
                 experiences_info,
             ) = self._experience_generation(
                 batch_size,
@@ -1006,15 +1208,15 @@ class DRL_agent(agent):
                 decorrelated,
                 use_masking=use_masking,
                 reset_options=reset_options,
-                episode_length=episode_length,
+                episode_lengths=episode_lengths,
             )
             initial_batch_state_norm = last_batch_state_norm
             initial_batch_action = last_batch_action
-            episode_length = last_episode_length
+            episode_lengths = last_episode_lengths
 
             # store unique visited states with the usage of set
             for state_norm in batch_visited_states_norm:
-                visited_states_norm.add(tuple(state_norm))
+                visited_states_norm.update(tuple(map(tuple, state_norm)))
 
             # store full list of episode lengths
             episode_lengths_tuple += experiences_info["episode_lengths"]
@@ -1102,7 +1304,7 @@ class DRL_agent(agent):
             # update reward curves
             if reward_curve_steps_per_point is not None:
                 self._update_reward_curves(
-                    environment,
+                    env_upd_curves,
                     q_net,
                     step,
                     device,
@@ -1240,9 +1442,11 @@ class DRL_agent(agent):
 
         Parameters
         ----------
-        environment: environment
-            Initialized environment of the simulation, deep copied inside of
-            this function to perform the greedy simulation.
+        environment: gym.Env
+            Initialized environment of the simulation.
+            DISCLAIMER : Make sure an independent env is provided, as greedy
+            simulation takes steps than can modify the internal state of the
+            provided environment.
         q_net: QNN
             Q-network with which make the simulation.
         step: int
@@ -1298,7 +1502,7 @@ class DRL_agent(agent):
         # make a small simulation to get the rewards of the net for an episode
         overall_return, _, _, _, episode_rewards, _ = self.greedy_simulation(
             q_net=q_net,
-            env=copy.deepcopy(environment),  # [1]
+            env=environment,  # [1]
             max_steps=steps_per_point,
             device=device,
             reset_options=reset_options,
@@ -1378,7 +1582,7 @@ class DRL_agent(agent):
         performance = episodes_lengths
         iterations = list(range(len(episodes_lengths)))
         ylabel, xlabel = "Experiences", "Episode"
-        ep_len_save_path = f"./img/{self.save_folder}/episode_len_learning_curve.png"
+        ep_len_save_path = f"./{self.save_folder}/episode_len_learning_curve.png"
 
         # plot
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -1444,7 +1648,8 @@ class DQN_agent(DRL_agent):
     def train(
         self,
         device: Literal["cuda", "mps", "cpu"],
-        environment: gym.Env,
+        environment: gym.Env | VecEnv,
+        env_upd_curves: gym.Env,
         discount_rate: float = 0.99,
         lr: float = 0.1,
         epsilon: float = 1.0,
@@ -1539,7 +1744,7 @@ class DQN_agent(DRL_agent):
         debug_counter = kwargs.get("debug_counter", 1)
 
         decorrelated = kwargs.get("decorrelated", False)
-        reset_options = kwargs.get("reset_options", False)
+        reset_options = kwargs.get("reset_options")
 
         # basic checks of input values
         self._check_train_inputs(
@@ -1556,13 +1761,19 @@ class DQN_agent(DRL_agent):
                 'target network' or 'double'."""
             )
 
-        # obtain episode start with reset method
-        env_norm_start_state, _ = environment.reset(
-            seed=self.seed, options=reset_options
-        )
+        # check number of envs
+        n_envs = environment.num_envs if isinstance(environment, VecEnv) else 0
+        idx_envs_list = list(range(n_envs))
 
-        # initialize batch state
-        initial_batch_state = env_norm_start_state
+        # obtain episode start with reset method [2]
+        if isinstance(environment, VecEnv):
+            environment.seed(seed=self.seed)
+            environment.set_options(options=reset_options)
+            initial_batch_state_norm = environment.reset()
+        else:
+            initial_batch_state_norm, _ = environment.reset(
+                seed=self.seed, options=reset_options
+            )
 
         # -------------------------------------------------------------------------
         # Step 0: define the NN of the Q function
@@ -1606,17 +1817,22 @@ class DQN_agent(DRL_agent):
         # obtained in memory experiences
         step = 1
         loss = np.inf
-        episode_length = 0
+        episode_lengths = np.tile(0, n_envs)
+        n_experiences_mem_init = (
+            int(batch_size / n_envs)  # initialize with batch size
+            if n_envs * n_new_experiences_per_step < batch_size
+            else n_new_experiences_per_step  # n_new_experiences_per_step*n_envs inside
+        )
         replay_memory = ReplayMemory(
             memory_size,
             self,
-            n_experiences=batch_size,  # agent._experience_generation kwargs
+            n_experiences_per_env=n_experiences_mem_init,  # _experience_gen. kwargs
             q_net=q_net,
             environment=environment,
             device=device,
             epsilon=epsilon,
-            initial_state=initial_batch_state,
-            initial_action=None,
+            initial_state=initial_batch_state_norm,
+            initial_action=(None if n_envs == 0 else np.tile(None, n_envs)),
             follow_next_action=False,
             decorrelated=decorrelated,
             use_masking=use_masking,
@@ -1624,6 +1840,7 @@ class DQN_agent(DRL_agent):
         )
         visited_states_norm = set()
         training_best_reward = -np.inf
+        total_n_experiences = n_experiences_mem_init
 
         # initialize learning curves
         loss_curve = learning_curve()
@@ -1652,27 +1869,49 @@ class DQN_agent(DRL_agent):
             # ----------------------------------------------------
             # Step 1.0: store new experiences in memory replay
             # ----------------------------------------------------
+            # continue experience storage from the state s' of the last
+            # experience of each environment
+            if n_envs == 0:
+                next_state_norm = replay_memory.memory[-1].next_state_norm
+            else:
+                last_experiences = {
+                    replay_memory.memory[
+                        -(env_idx + 1)
+                    ].env_idx: replay_memory.memory[  # +1 so we index from -1 to -4
+                        -(env_idx + 1)
+                    ].next_state_norm
+                    for env_idx in idx_envs_list
+                }
+                # make sure we have one experience per environment
+                assert pd.Series(last_experiences.keys()).isin(idx_envs_list).all()
+                # make sure last experiences are stored in the desired order
+                # (this is, by environment idx)
+                next_state_norm = np.array(
+                    [last_experiences[env_idx] for env_idx in idx_envs_list]
+                )
+
             # generate selected number of new experiences
-            # continue experience storage from the state s' of the last experience
-            new_experiences, _, _, _, _, last_episode_length, experiences_info = (
+            new_experiences, _, _, _, _, last_episode_lengths, experiences_info = (
                 self._experience_generation(
-                    n_experiences=n_new_experiences_per_step,
+                    n_experiences_per_env=n_new_experiences_per_step,
                     q_net=q_net,
                     environment=environment,
                     device=device,
                     epsilon=epsilon,
-                    initial_state=replay_memory.memory[-1].next_state_norm,
-                    initial_action=None,
+                    initial_state=next_state_norm,
+                    initial_action=(None if n_envs == 0 else np.tile(None, n_envs)),
                     follow_next_action=False,
                     decorrelated=decorrelated,
                     use_masking=use_masking,
                     reset_options=reset_options,
-                    episode_length=episode_length,
+                    episode_lengths=episode_lengths,
                 )
             )
-            episode_length = last_episode_length
+            episode_lengths = last_episode_lengths
             # store full list of episode lengths
             episode_lengths_tuple += experiences_info["episode_lengths"]
+            # store total number of experiences
+            total_n_experiences += len(new_experiences)
 
             # store the transition
             replay_memory.push(new_experiences)
@@ -1693,7 +1932,7 @@ class DQN_agent(DRL_agent):
                 for experience in batch:
                     # store unique visited states during the network training
                     # with the usage of set
-                    visited_states_norm.add(tuple(experience.state_norm))
+                    visited_states_norm.update(experience.state_norm)
 
                     # Obtain ALL the q value estimations of the net for state.
                     # It is necessary to set input as float32 so Pytorch does
@@ -1792,7 +2031,7 @@ class DQN_agent(DRL_agent):
             # episode
             if reward_curve_steps_per_point is not None:
                 self._update_reward_curves(
-                    environment,
+                    env_upd_curves,
                     q_net,
                     step,
                     device,
@@ -1852,6 +2091,8 @@ class DQN_agent(DRL_agent):
         # -------------------------------------------------------------------------
         # Step 3: plot relevant data and save their figures and objects
         # -------------------------------------------------------------------------
+        logging.info(f"Total number of experiences obtained: {total_n_experiences}")
+
         if plot_learning_curves:
             self._plot_learning_curves(
                 loss_curve,
