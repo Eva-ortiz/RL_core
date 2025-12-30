@@ -207,7 +207,14 @@ class DRL_agent(agent):
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
         use_masking: bool = False,
-    ) -> tuple[float, Reward, Reward, State_norm, str]:
+    ) -> tuple[
+        float,
+        Reward,
+        deque[str],
+        deque[State],
+        deque[Reward],
+        list[dict[str, Any]],
+    ]:
         """Greedy simulation with current Q network and reset environment.
 
         Parameters
