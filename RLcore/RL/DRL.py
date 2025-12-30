@@ -11,9 +11,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from basics import agent
 from environment import ENV, Action, Reward, Setup_mode, State, State_norm
-from plots import learning_curve, save_fig_df
+from RL.basics import agent
+from RL.plots import learning_curve, save_fig_df
 from sb3_contrib.common.maskable.utils import get_action_masks
 
 transition = namedtuple(
