@@ -3,8 +3,9 @@ from collections import deque
 from typing import Any
 
 import gymnasium as gym
-from environment import Reward, State, State_norm
 from sb3_contrib import MaskablePPO
+
+from RLcore.environment import Reward, State, State_norm
 
 
 def maskablePPO_step_prediction(
