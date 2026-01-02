@@ -330,7 +330,7 @@ def maskablePPO_train(
     """
     # store params not to be optimized for training
     int_params = ["n_steps", "batch_size", "n_epochs"]
-    float_params = ["learning_rate", "gamma", "gae_lambda", "ent_coef"]
+    float_params = ["learning_rate", "gamma", "gae_lambda", "ent_coef", "vf_coef"]
     params2opt = [key for key, value in ppo_cfg.items() if isinstance(value, list)]
     params4training = {
         hp: ppo_cfg[hp] for hp in int_params + float_params if hp not in params2opt
