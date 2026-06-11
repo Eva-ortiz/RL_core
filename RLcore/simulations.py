@@ -258,6 +258,7 @@ def approximated_simulation(
             max_steps=cfg_env["max_transitions"],
             device=device,
             reset_options=cfg_hiperpar["train"].get("reset_options", None),
+            use_masking=cfg_hiperpar["train"]["use_masking"],
         )
 
     print("DEEP REINFORCEMENT LEARNING IS DONE!")

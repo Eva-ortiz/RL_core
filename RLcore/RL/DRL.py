@@ -11,16 +11,33 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from basics import agent
 from environment import ENV, Action, Reward, Setup_mode, State, State_norm
-from plots import learning_curve, save_fig_df
+from RL.basics import agent
+from RL.plots import learning_curve, save_fig_df
+from sb3_contrib.common.maskable.utils import get_action_masks
 
 transition = namedtuple(
-    "transition", ("state_norm", "action_idx", "reward", "next_state_norm")
+    "transition",
+    (
+        "state_norm",
+        "action_masks",
+        "action_idx",
+        "reward",
+        "next_state_norm",
+        "next_action_masks",
+    ),
 )
 sarsa_transition = namedtuple(
     "transition",
-    ("state_norm", "action_idx", "reward", "next_state_norm", "next_action_idx"),
+    (
+        "state_norm",
+        "action_masks",
+        "action_idx",
+        "reward",
+        "next_state_norm",
+        "next_action_masks",
+        "next_action_idx",
+    ),
 )
 
 
@@ -133,7 +150,7 @@ class DRL_agent(agent):
         self,
         algorithm: Literal["Sarsa", "Q-learning", "double_Q-learning"],
         actions: np.typing.ArrayLike,
-        save_folder: str = "DRL_results",
+        save_folder: str = "DRL_out",
         seed: int | None = None,
         verbose: bool = False,
         **kwargs,
@@ -154,7 +171,7 @@ class DRL_agent(agent):
             Collection of all possible actions of the problem.
         save_folder : str, optional
             Default name of the save folder for the outputs of the algorithm.
-            By default, "DRL_outputs"
+            By default, "DRL_out"
         seed : int | None, optional
             Seed for the pseudo random generators
         verbose : bool, optional
@@ -189,7 +206,15 @@ class DRL_agent(agent):
         max_steps: int,
         device: Literal["cuda", "mps", "cpu"],
         reset_options: dict[str, Any] | None = None,
-    ) -> tuple[float, Reward, Reward, State_norm, str]:
+        use_masking: bool = False,
+    ) -> tuple[
+        float,
+        Reward,
+        deque[str],
+        deque[State],
+        deque[Reward],
+        list[dict[str, Any]],
+    ]:
         """Greedy simulation with current Q network and reset environment.
 
         Parameters
@@ -207,6 +232,9 @@ class DRL_agent(agent):
         reset_options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset. By
             default, None.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks for action selection, by
+            default False.
 
         Returns
         -------
@@ -251,6 +279,9 @@ class DRL_agent(agent):
 
         # generate the simulation
         while step < max_steps or (not terminated and not truncated):
+            # if action masking, check env action masks
+            action_masks = get_action_masks(env) if use_masking else None
+
             # get action with greedy policy, as we want to evaluate the
             # optimality of the `q_net`
             action_idx, _, action_label = self._act(
@@ -258,6 +289,7 @@ class DRL_agent(agent):
                 state_norm,
                 q_net=q_net,
                 device=device,
+                action_masks=action_masks,
             )
 
             # observe response of the environment
@@ -310,6 +342,7 @@ class DRL_agent(agent):
         initial_action: Action | None,
         follow_next_action: bool = False,
         decorrelated: bool = False,
+        use_masking: bool = False,
         **kwargs,
     ) -> tuple[
         list[namedtuple],
@@ -350,6 +383,9 @@ class DRL_agent(agent):
         decorrelated : bool, optional
             Select if experience samples are decorrelated. If True, they will.
             By default, False.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks during experience
+            generation, by default False.
 
         ** kwargs
             reset_options : dict, optional
@@ -409,6 +445,10 @@ class DRL_agent(agent):
           case, a restart of the environment will be done.
         * Decorrelated transitions are given through random sampling of states.
           Several authors recommend this practice.
+
+        References
+        ----------
+        ..[1] https://github.com/Stable-Baselines-Team/stable-baselines3-contrib/blob/master/sb3_contrib/ppo_mask/ppo_mask.py#L227
         """
         # check input initial action
         if initial_action is not None and not isinstance(initial_action, Action):
@@ -448,6 +488,9 @@ class DRL_agent(agent):
             # store visited states
             visited_states_norm.add(tuple(state_norm))  # solve not hashable
 
+            # if action masking, check env action masks [1]
+            action_masks = get_action_masks(environment) if use_masking else None
+
             # if action has not been provided as input, choose action with
             # behaviour policy
             if action_idx is None:
@@ -457,6 +500,7 @@ class DRL_agent(agent):
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
+                    action_masks=action_masks,
                 )
 
             # observe response of the environment
@@ -468,10 +512,20 @@ class DRL_agent(agent):
             # store reached states
             reached_states.add(tuple(next_state_norm))
 
+            # if action masking, check env action masks [1]
+            next_action_masks = get_action_masks(environment) if use_masking else None
+
             # store the transition
             if not follow_next_action:
                 experiences.append(
-                    transition(state_norm, action_idx, reward, next_state_norm)
+                    transition(
+                        state_norm,
+                        action_masks,
+                        action_idx,
+                        reward,
+                        next_state_norm,
+                        next_action_masks,
+                    )
                 )
 
             # store sarsa transition if track_next_action is selected
@@ -483,15 +537,18 @@ class DRL_agent(agent):
                     q_net=q_net,
                     device=device,
                     epsilon=epsilon,
+                    action_masks=next_action_masks,
                 )
 
                 # store next action in transition
                 experiences.append(
                     sarsa_transition(
                         state_norm,
+                        action_masks,
                         action_idx,
                         reward,
                         next_state_norm,
+                        next_action_masks,
                         next_action_idx,
                     )
                 )
@@ -537,6 +594,7 @@ class DRL_agent(agent):
         state_norm: State_norm,
         q_net: QNN,
         device: Literal["cuda", "mps", "cpu"],
+        action_masks: np.ndarray[bool] | None = None,
         **kwargs,
     ) -> tuple[int, float, str]:
         """Return the action that the agent takes given an state.
@@ -557,6 +615,8 @@ class DRL_agent(agent):
             state.
         device : Literal["cuda", "mps", "cpu"]
             Currently used device for training.
+        action_masks : np.ndarray[bool] | None, optional
+            Action mask, by default None, so do not apply masking.
 
         **kwargs
             epsilon : float
@@ -578,14 +638,25 @@ class DRL_agent(agent):
         ----------
         ..[1] https://pytorch.org/docs/stable/generated/torch.max.html#torch.max
         """
-        # Obtain the action-state values for all actions from input `state`
-        # Additionally, execute the forward pass at the same device we are using for
-        # training to avoid a Pytorch `RuntimeError`
-        # It is necessary to set input as float32 so Pythorch does not return us
-        # a `RuntimeError` due dtypes
-        q_values = q_net.forward(
-            torch.from_numpy(state_norm.astype(np.float32)).to(device)
-        )
+        assert len(state_norm.shape) == len(
+            action_masks.shape
+        ), "Inconsistent `state_norm`/`action_masks` dimensions."
+
+        # make sure we will not influence the q_network
+        with torch.no_grad():
+            # Obtain the action-state values for all actions from input `state`
+            # Additionally, execute the forward pass at the same device we are using for
+            # training to avoid a Pytorch `RuntimeError`
+            # It is necessary to set input as float32 so Pythorch does not return us
+            # a `RuntimeError` due dtypes
+            q_values = q_net.forward(
+                torch.from_numpy(state_norm.astype(np.float32)).to(device)
+            )
+
+            # change related to invalid action masking
+            if action_masks is not None:
+                # q value of -inf for invalid actions
+                q_values[~np.array(action_masks)] = -np.inf
 
         # -------- BASIC CHECKS --------
         # check if the number of outputs are the same than the number of actions
@@ -616,7 +687,15 @@ class DRL_agent(agent):
 
         # select the action depending on a random number and epsilon value
         if epsilon > rand:
-            action_idx = self.random_rng.randint(0, len(self.actions) - 1)
+            # change related to invalid action masking
+            valid_actions = (
+                np.nonzero(action_masks)[
+                    0
+                ].tolist()  # actions idx: native python dtypes
+                if action_masks is not None
+                else range(len(self.actions))
+            )
+            action_idx = self.random_rng.choice(valid_actions)
 
         # select the action with a greedy policy
         else:
@@ -686,6 +765,7 @@ class DRL_agent(agent):
         batch_size: int = 64,
         max_steps: int = np.inf,
         tol_loss: float = 0.0,
+        use_masking: bool = False,
         plot_learning_curves: bool = True,
         save_q_net: bool = True,
         **kwargs,
@@ -714,6 +794,9 @@ class DRL_agent(agent):
             By default, np.inf
         tol_loss : float, optional
             Tolerance to consider action values have converged. By default, 0.0
+        use_masking : bool, optional
+            Whether or not to use invalid action masks during training, by
+            default False.
         plot_learning_curves : bool, optional
             Select to plot learning curves or not. By default, True
         save_q_net : bool, optional
@@ -921,6 +1004,7 @@ class DRL_agent(agent):
                 initial_batch_action,
                 follow_next_action,
                 decorrelated,
+                use_masking=use_masking,
                 reset_options=reset_options,
                 episode_length=episode_length,
             )
@@ -978,6 +1062,7 @@ class DRL_agent(agent):
                             experience.next_state_norm,
                             q_net=q_net,
                             device=device,
+                            action_masks=experience.next_action_masks,
                         )
 
                     # update the target action values
@@ -1028,6 +1113,7 @@ class DRL_agent(agent):
                     epsilon,
                     training_best_reward,
                     reset_options,
+                    use_masking,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
@@ -1070,7 +1156,7 @@ class DRL_agent(agent):
         if save_q_net:  # [1]
             torch.save(
                 q_net.state_dict(),
-                f"./data/{self.save_folder}/q_net_{in_dim}_inputs.pt",
+                f"./models/{self.save_folder}/q_net_{in_dim}_inputs.pt",
             )
 
         # -------------------------------------------------------------------------
@@ -1108,7 +1194,7 @@ class DRL_agent(agent):
         )
 
         # load weights and biases
-        w_and_b = torch.load(f"./data/{save_folder}/q_net_{in_dim}_inputs.pt")
+        w_and_b = torch.load(f"./models/{save_folder}/q_net_{in_dim}_inputs.pt")
         # load weights and biases into created neural network object
         # employ `w_and_b` for the net before any operation to avoid consuming
         # the iterable
@@ -1145,6 +1231,7 @@ class DRL_agent(agent):
         epsilon: float | None = None,
         training_best_reward: float | None = None,
         reset_options: dict[str, Any] | None = None,
+        use_masking: bool = False,
     ):
         """Update selected reward curves in `reward_curve_mode` for each step.
 
@@ -1181,6 +1268,9 @@ class DRL_agent(agent):
         reset_options : dict[str, Any] | None, optional
             Additional information to specify how the environment is reset. By
             default, None.
+        use_masking : bool, optional
+            Whether or not to use invalid action masks in greedy simulation, by
+            default False.
 
         Warnings
         --------
@@ -1212,6 +1302,7 @@ class DRL_agent(agent):
             max_steps=steps_per_point,
             device=device,
             reset_options=reset_options,
+            use_masking=use_masking,
         )
         for idx, reward_curve_mode_ in enumerate(reward_curve_mode):
             if reward_curve_mode_ == "greedy_return":
@@ -1360,6 +1451,7 @@ class DQN_agent(DRL_agent):
         batch_size: int = 64,
         max_steps: int = np.inf,
         tol_loss: float = 0.0,
+        use_masking: bool = False,
         plot_learning_curves: bool = True,
         save_q_net: bool = True,
         memory_size: int = 10000,
@@ -1527,6 +1619,7 @@ class DQN_agent(DRL_agent):
             initial_action=None,
             follow_next_action=False,
             decorrelated=decorrelated,
+            use_masking=use_masking,
             reset_options=reset_options,
         )
         visited_states_norm = set()
@@ -1572,6 +1665,7 @@ class DQN_agent(DRL_agent):
                     initial_action=None,
                     follow_next_action=False,
                     decorrelated=decorrelated,
+                    use_masking=use_masking,
                     reset_options=reset_options,
                     episode_length=episode_length,
                 )
@@ -1627,6 +1721,7 @@ class DQN_agent(DRL_agent):
                             experience.next_state_norm,
                             q_net=network_for_target_estimation,
                             device=device,
+                            action_masks=experience.next_action_masks,
                         )
 
                         # double DQN: take the q value from target network with
@@ -1708,6 +1803,7 @@ class DQN_agent(DRL_agent):
                     epsilon,
                     training_best_reward,
                     reset_options,
+                    use_masking,
                 )
 
             # reduction of epsilon at each episode, with a min value of min_eps
@@ -1750,7 +1846,7 @@ class DQN_agent(DRL_agent):
         if save_q_net:  # [1]
             torch.save(
                 q_net.state_dict(),
-                f"./data/{self.save_folder}/q_net_{in_dim}_inputs.pt",
+                f"./models/{self.save_folder}/q_net_{in_dim}_inputs.pt",
             )
 
         # -------------------------------------------------------------------------
