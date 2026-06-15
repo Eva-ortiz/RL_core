@@ -66,6 +66,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         action_names: np.typing.ArrayLike,
         start_env: Environment | Literal["random"] = "random",
         env_idx: int | None = None,
+        global_obs: bool = False,
         conf_path: str = "./config.toml",
     ) -> None:
         """Environment.
@@ -82,6 +83,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             Index of environment. Useful to keep track of logging of each
             environment when vectorized environments are used. If None, do not
             display any idx. By default, None.
+        global_obs : bool, optional
+            If True, the observation is a global one: besides the features of
+            the current state (single observation), it includes features of
+            overall environment. If False, only the single observation is used.
+            By default, False.
         conf_path : str, optional
             Path to config file, by default "./config.toml".
 
@@ -96,20 +102,53 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # load config
         self.conf = load_conf(conf_path)["environment"]
 
+        # store whether to use global observations
+        self.global_obs = global_obs
+
         # store relevant names
         self.action_col = "TODO : str"
         self.state_col_1, self.state_col_2 = "TODO : str", "TODO : str"
-
-        # WARNING: `self.state_cols` order is VERY VERY VERY important for the
-        # remaining pipeline
-        self.state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
-        self.env_cols = self.state_cols + ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
+        self.global_state_col_1, self.global_state_col_2 = (
+            "TODO : str",
+            "TODO : str",
+        )  # if `global_obs`
 
         # Store relation between action number and its name, sorted
         # alphabetically
         self._action_name_dict = {
             idx: name for idx, name in enumerate(np.sort(action_names))
         }
+
+        # WARNING: `self.single_state_cols` and `self.global_state_cols` order is
+        # VERY VERY VERY important for the remaining pipeline
+
+        # single observation: features of the current state
+        self.single_state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
+        # global features, only used when `global_obs` is True
+        self.global_feat_cols = [
+            self.global_state_col_1,
+            self.global_state_col_2,
+        ]  # [4 EXAMPLE]
+        # Global observation: single observation + the global features (only when `global_obs` is selected)
+        # Here we provide an example where there is a feature associated with each possible action (eg. position, predicted quantity of the reward...)
+        self.global_state_cols = np.concatenate(
+            [self.single_state_cols]
+            + (
+                [
+                    [
+                        f"{self.global_state_col_1}_{action_name}",
+                        f"{self.global_state_col_2}_{action_name}",
+                    ]  # [4 EXAMPLE]
+                    for action_name in self._action_name_dict.values()
+                ]
+                if self.global_obs
+                else []
+            )
+        ).tolist()
+        self.env_cols = self.global_state_cols + [
+            "TODO : str",
+            "TODO : str",
+        ]  # [4 EXAMPLE]
 
         # initialize some counters, store current and initial environment and
         # state info, and initialize visited actions memory
@@ -123,10 +162,20 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         # State space composed by continuous values
         # We will usually normalize its values [1]
+        # If `global_obs`, the single observation is extended with
+        # to `len(global_state_cols)` features.
+        # Remember we have the example where there is a set of features per possible action,
+        # that's the reason for `n_global * n_actions` features.
+        n_actions = np.size(action_names)
+        n_global_feat = len(self.global_feat_cols)
+        lower_bound = [-1] * len(self.single_state_cols) + (
+            [-1] * n_global_feat * n_actions if self.global_obs else []
+        )  # [4 EXAMPLE]
+        higher_bound = [1] * len(self.single_state_cols) + (
+            [1] * n_global_feat * n_actions if self.global_obs else []
+        )  # [4 EXAMPLE]
         self.observation_space = gym.spaces.Box(
-            low=np.array([-1] * len(self.state_cols)),  # [4 EXAMPLE]
-            high=np.array([1] * len(self.state_cols)),  # [4 EXAMPLE]
-            dtype=np.float64,
+            low=np.array(lower_bound), high=np.array(higher_bound), dtype=np.float64
         )  # [4]
 
     def action_idx_to_name(self, action_idx: int) -> str:
