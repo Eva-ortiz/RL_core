@@ -499,7 +499,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             {self.env_cols[idx]: val for idx, val in enumerate(rand_values)}
         )
 
-        # remember: defined state must contain `state_cols`
+        # remember: defined state must contain `single_state_cols` (and
+        # `global_state_cols` when `global_obs` is selected)
         assert set(self.env_cols) == set(
             env.index
         ), f"Environment must be composed of {self.env_cols} fields."
