@@ -1,10 +1,13 @@
 import logging
+from math import inf  # new
+from timeit import default_timer  # new
 from typing import TypeVar
 
 import gymnasium as gym
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3.common.type_aliases import MaybeCallback
+from utils import sec_2_day_hour_min  # new
 
 SelfMaskablePPO = TypeVar("SelfMaskablePPO", bound="MaskablePPO")
 
@@ -50,6 +53,7 @@ class MaskablePPO_custom(MaskablePPO):
 
         terminated, truncated = False, False
         rewards = []
+        action_masks = None
         while not terminated and not truncated:
             # This is the only change related to invalid action masking
             # (comment from sb3_contrib.MaskablePPO)
@@ -81,6 +85,9 @@ class MaskablePPO_custom(MaskablePPO):
     ) -> SelfMaskablePPO:
         """Copy of MaskablePPO learn implementation with greedy agent simulation."""
         iteration = 0
+        greedy_return = None  # new
+        max_greedy_return = -inf  # new
+        learn_start = default_timer()  # new
 
         total_timesteps, callback = self._setup_learn(
             total_timesteps,
@@ -127,12 +134,37 @@ class MaskablePPO_custom(MaskablePPO):
                     )  # new
                 greedy_return = self.greedy_simulation(greedy_env, use_masking)  # new
 
+                # NEW: if new maximum greedy return, log info with return, timestep
+                # and elapsed time
+                if greedy_return > max_greedy_return:  # new
+                    checkpoint = default_timer()  # new
+                    elapsed = checkpoint - learn_start  # new
+                    days, hours, minutes = sec_2_day_hour_min(elapsed)  # new
+                    logging.info(
+                        f"New maximum greedy return {greedy_return} found at "
+                        f"{self.num_timesteps} timestep & {days}:{hours}:{minutes:.3f}"
+                        " elapsed time in learning process."
+                    )  # new
+                    max_greedy_return = greedy_return  # new
+
+                self.logger.record("train/greedy_test", greedy_return)  # new
+                self.logger.record(
+                    "train/greedy_n_experiences", self.num_timesteps
+                )  # new
+                self.logger.record("train/greedy_n_updates", self._n_updates)  # new
+
             # NEW : self.num_timesteps corresponds to the total number of steps
             # taken per the number of environments (see self.collect_rollouts
             # and [1])
             self.logger.record("train/n_experiences", self.num_timesteps)  # new
-            self.logger.record("train/greedy_test", greedy_return)  # new
 
         callback.on_training_end()
+
+        learn_end = default_timer()  # new
+        learn_time = learn_end - learn_start  # new
+        days, hours, minutes = sec_2_day_hour_min(learn_time)  # new
+        logging.info(
+            f"Total learning elapsed time: {days}:{hours}:{minutes:.3f}"
+        )  # new
 
         return self
