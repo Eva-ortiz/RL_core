@@ -129,8 +129,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             self.global_state_col_1,
             self.global_state_col_2,
         ]  # [4 EXAMPLE]
-        # Global observation: single observation + the global features (only when `global_obs` is selected)
-        # Here we provide an example where there is a feature associated with each possible action (eg. position, predicted quantity of the reward...)
+        # Global observation: single observation + the global features (only
+        # when `global_obs` is selected).
+        # Here we provide an example where there is a feature associated with
+        # each possible action (eg. position, predicted quantity of the
+        # reward...)
         self.global_state_cols = np.concatenate(
             [self.single_state_cols]
             + (
@@ -163,9 +166,9 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # State space composed by continuous values
         # We will usually normalize its values [1]
         # If `global_obs`, the single observation is extended with
-        # to `len(global_state_cols)` features.
-        # Remember we have the example where there is a set of features per possible action,
-        # that's the reason for `n_global * n_actions` features.
+        # `len(global_state_cols)` features.
+        # Remember we have the example where there is a set of features per
+        # possible action, that's the reason for `n_global * n_actions` features.
         n_actions = np.size(action_names)
         n_global_feat = len(self.global_feat_cols)
         lower_bound = [-1] * len(self.single_state_cols) + (
