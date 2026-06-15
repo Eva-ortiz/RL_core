@@ -13,6 +13,7 @@ from sb3_custom.common.env_util import make_vec_env_custom
 from sb3_custom.common.monitor import Monitor_custom
 from sb3_custom.ppo_mask.ppo_mask import MaskablePPO_custom
 from stable_baselines3.common.logger import Logger
+from stable_baselines3.common.utils import get_linear_fn
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
 from utils import Capturing, check_bool_or_float, check_bool_or_int, load_conf, timer
 
@@ -338,6 +339,26 @@ def maskablePPO_train(
     not be retrieved. However, during training:
     * Missing uv data can be tracked setting logging level to DEBUG.
 
+    Notes
+    -----
+    **Learning rate scheduling** (``[agent.PPO.lr]`` section in config):
+
+    The learning rate can operate in two modes controlled by
+    ``lr_linear_schedule``:
+
+    * **Constant** (``lr_linear_schedule = false``): a fixed learning rate is
+      used throughout training. Only ``learning_rate`` is read; ``start``,
+      ``end`` and ``end_fraction`` are ignored.
+    * **Linear decay** (``lr_linear_schedule = true``): uses
+      ``stable_baselines3.common.utils.get_linear_fn`` [12] to build a callable
+      that linearly decays the learning rate from ``start`` to ``end`` over
+      the first ``end_fraction`` of training (as a fraction of total
+      timesteps), then holds the ``end`` value for the remainder. In this
+      mode ``learning_rate`` is ignored.
+
+    All numeric parameters follow the standard ``[min, max, log_scale]``
+    format for Optuna optimization. Use a scalar to fix the parameter.
+
     References
     ----------
     .. [1] https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
@@ -350,15 +371,44 @@ def maskablePPO_train(
     .. [8] https://optuna.readthedocs.io/en/stable/faq.html#how-can-i-obtain-reproducible-optimization-results
     .. [9] https://optuna.readthedocs.io/en/stable/faq.html#how-are-exceptions-from-trials-handled
     .. [10] https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecenv-api-vs-gym-api
+    .. [12] https://stable-baselines3.readthedocs.io/en/master/common/utils.html#stable_baselines3.common.utils.get_linear_fn
     """
     ppo_cfg = load_conf(cfg_path)["agent"]["PPO"]
 
+    # extract lr sub-config and inject params back into ppo_cfg
+    lr_cfg = ppo_cfg.pop("lr")
+    use_lr_schedule = lr_cfg["lr_linear_schedule"]
+    if use_lr_schedule:
+        for p in ("start", "end", "end_fraction"):
+            ppo_cfg[f"lr_{p}"] = lr_cfg[p]
+    else:
+        ppo_cfg["learning_rate"] = lr_cfg["learning_rate"]
+
+    def _resolve_lr_linear_schedule(params: dict) -> None:
+        """lr_start/lr_end/lr_end_fraction to learning_rate callable for training."""
+        params["learning_rate"] = get_linear_fn(
+            params.pop("lr_start"),
+            params.pop("lr_end"),
+            params.pop("lr_end_fraction"),
+        )
+
     # store params not to be optimized for training
     int_params = ["n_steps", "batch_size", "n_epochs"]
-    float_params = ["learning_rate", "gamma", "gae_lambda", "ent_coef"]
+    float_params = [
+        "learning_rate",
+        "gamma",
+        "gae_lambda",
+        "ent_coef",
+        "vf_coef",
+        "lr_start",
+        "lr_end",
+        "lr_end_fraction",
+    ]
     params2opt = [key for key, value in ppo_cfg.items() if isinstance(value, list)]
     params4training = {
-        hp: ppo_cfg[hp] for hp in int_params + float_params if hp not in params2opt
+        hp: ppo_cfg[hp]
+        for hp in int_params + float_params
+        if hp in ppo_cfg and hp not in params2opt
     }
 
     # ------- HP OPTIMIZATION -------
@@ -420,6 +470,10 @@ def maskablePPO_train(
 
             # merge given value and trial parameters
             trial_params = objective_params4training | MaskablePPO_hp2tune
+            # if linear lr schedule, transform optuna suggested params for learning
+            # rate start, end and end fraction into the schedule to use on training
+            if use_lr_schedule:
+                _resolve_lr_linear_schedule(trial_params)
             # set the agent
             agent = MaskablePPO(
                 policy="MlpPolicy",
@@ -509,6 +563,10 @@ def maskablePPO_train(
     )
 
     with timer(tag="train_time") as train_time:
+        # employ scheduler for training if selected
+        if use_lr_schedule:
+            _resolve_lr_linear_schedule(train_params)
+
         # set the agent
         agent = MaskablePPO_custom(
             policy="MlpPolicy",

@@ -69,13 +69,13 @@ discount_rate = 0.99
 #   * if float, step of change
 #   * if false, default step by optuna
 # CAUTION: names have to be the same than MaskablePPO inputs
-learning_rate = [1e-6, 1e-2, true] # min, max, step
 n_steps = [5, 20, 5]
 batch_size = [8, 32, 8]
 n_epochs = [10, 100, true]
 gamma = [0.1, 1, 0.2]
 gae_lambda = [0.1, 1, 0.2]
 ent_coef = [0.01, 0.1, 0.03]
+vf_coef = 0.5
 
 seed = 0
 
@@ -90,3 +90,17 @@ n_trials = 20
 
 # agent monitorization
 greedy_check_interval = 1 # None to disable greedy test during training
+
+[agent.PPO.lr]
+lr_linear_schedule = false # true for get_linear_fn scheduler, else constant value
+
+# optuna also applies here by lists: min, max, step
+# TIP : if param is not a list, it won't be tuned by optuna
+
+# only applies if lr_linear_schedule = false
+learning_rate = [1e-6, 1e-2, true]
+
+# only applies if lr_linear_schedule = true
+start = [1e-1, 1e-3, true]
+end = [1e-4, 1e-6, true]
+end_fraction = 0.85
