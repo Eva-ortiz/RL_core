@@ -1,4 +1,5 @@
 import logging
+from collections import deque
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -35,6 +36,34 @@ class Setup_mode(StrEnum):
 
     INIT = "init"
     RESET = "reset"
+
+
+class StatesMemory:
+    """Store stack of states.
+
+    Useful to capture state sequential information such as temporal dependence.
+
+    References
+    ----------
+    .. [1] https://docs.python.org/3/library/collections.html#collections.deque
+    """
+
+    def __init__(self, capacity):
+        self.memory = deque(maxlen=capacity)
+
+    def push(self, state: State | State_norm):
+        """Save state / normalized state.
+
+        Save normalized state is recommended.
+
+        When `capacity` is reached, `deque` iterator automatically remove older
+        elements when new ones are appended. [1]
+        """
+        self.memory.append(state)
+
+    def __len__(self):
+        """Memory len."""
+        return len(self.memory)
 
 
 class ENV(gym.Env):  # type: ignore[type-arg]
