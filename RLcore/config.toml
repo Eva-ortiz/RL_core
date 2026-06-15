@@ -104,3 +104,7 @@ learning_rate = [1e-6, 1e-2, true]
 start = [1e-1, 1e-3, true]
 end = [1e-4, 1e-6, true]
 end_fraction = 0.85
+
+[agent.PPO.net_arch] # delete for default architecture
+pi = [128, 64, 48] # if states stack, bigger network is recommended, e.g. [256, 192, 128, 64, 48]
+vf = [128, 64, 48]
