@@ -281,6 +281,17 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self._visited_actions_memory = {
             self.action_name_to_idx(self.current_env[self.action_col])
         }
+
+        if self.n_states_stack is not None:
+            # initialize normalized states memory
+            self._norm_states_memory = StatesMemory(capacity=self.n_states_stack)
+            # add the first state as many times as the stack capacity, providing
+            # a static start history
+            for _ in range(self.n_states_stack):
+                self._norm_states_memory.push(norm_state)
+            # define `norm_state` with the current stack of states
+            norm_state = np.array(self._norm_states_memory.memory).flatten()
+
         return norm_state
 
     def step(
