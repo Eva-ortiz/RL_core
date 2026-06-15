@@ -512,8 +512,22 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         Parameters
         ----------
         state : State
-            Description of the state. Must be given with `self.state_cols`
-            variables.
+            State description. Must contain `self.single_state_cols` and 
+            also `self.global_state_cols`, if apply.
+
+        Returns
+        -------
+        State_norm
+            Normalized observation values.
+        """
+        norm_state = self._normalize_state_values_single(state[self.single_state_cols])
+        if self.global_obs:
+            norm_state = self._normalize_state_values_global(
+                all_action_names=self._action_name_dict.values(),
+                state_global=state[self.global_state_cols],
+                norm_single_state=norm_state
+            )
+        return norm_state
 
         Returns
         -------
