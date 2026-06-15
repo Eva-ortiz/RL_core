@@ -417,7 +417,11 @@ def maskablePPO_train(
             episode_env.reset(seed=ppo_cfg["seed"])
             # obtain the value to optimize
             _, _, _, _, _, episode_rewards, _ = maskablePPO_episode(
-                start_state=env_kwargs["start_env"],
+                start_state=(
+                    env_kwargs["start_env"]
+                    if episode_env.n_states_stack is None
+                    else np.array(episode_env._norm_states_memory.memory).flatten()
+                ),  # CAUTION: if modified make sure states stack has dtype `State_norm`
                 agent=agent,
                 env=episode_env,
                 deterministic=True,
