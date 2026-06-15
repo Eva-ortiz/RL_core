@@ -79,7 +79,7 @@ def maskedPPO_agent(
                 start_env
                 if env.n_states_stack is None
                 else np.array(env._norm_states_memory.memory).flatten()
-            ),
+            ),  # CAUTION: if modified, make sure states stack has dtype `State_norm`
             agent=agent,
             env=env,
             deterministic=True,
