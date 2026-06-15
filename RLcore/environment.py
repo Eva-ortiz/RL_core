@@ -529,24 +529,33 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             )
         return norm_state
 
+    def _normalize_state_values_single(self, state: State) -> State_norm:
+        """Normalize each one of the single-observation state variables.
+
+        Parameters
+        ----------
+        state : State
+            Description of the state. Must be given with
+            `self.single_state_cols` variables.
+
         Returns
         -------
         State_norm
-            Normalized state values.
+            Normalized single-observation values.
         """
         # check expected cols are in input state
-        assert set(self.state_cols) == (
+        assert set(self.single_state_cols).issubset(
             set(state.index)
-        ), f"Expected {self.state_cols} in input state."
+        ), f"Expected {self.single_state_cols} in input state."
 
         # initialize array of storage
-        norm_state = np.zeros(shape=len(self.state_cols))
+        norm_state = np.zeros(shape=len(self.single_state_cols))
 
         # obtain the order of each variable in the state array [8]
-        sorter = np.argsort(self.state_cols)
+        sorter = np.argsort(self.single_state_cols)
         var_idx_1, var_idx_2 = sorter[
             np.searchsorted(
-                self.state_cols,
+                self.single_state_cols,
                 [self.state_col_1, self.state_col_2],
                 sorter=sorter,
             )
