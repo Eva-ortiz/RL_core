@@ -247,9 +247,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                 # define the initial environment
                 self.init_env = start_env
                 # and the initial state
-                self.init_state = self._normalize_state_values(
-                    start_env[self.state_cols]
-                )
+                self.init_state = self._normalize_state_values(start_env)
 
         # set current environment to that specified, ignoring `init_env` and
         # `init_state` info
@@ -260,18 +258,18 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                 )
             self.current_env = current_env
             # compute norm_state for later return
-            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
+            norm_state = self._normalize_state_values(self.current_env)
 
         # in randomly initialized environment, `init_state` is None together
         # with `init_env`
         elif self.init_env is None and self.init_state is None:
             # define a random current environment state
             current_env = self._random_env_state()
-            while self._termination(current_env[self.state_cols]):
+            while self._termination(current_env[self.single_state_cols]):
                 current_env = self._random_env_state()
             self.current_env = current_env
             # compute norm_state for later return
-            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
+            norm_state = self._normalize_state_values(self.current_env)
 
         # in static initial env, `init_state` is NOT None together with `init_env`
         elif self.init_env is not None and self.init_state is not None:
