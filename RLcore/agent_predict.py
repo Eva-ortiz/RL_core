@@ -72,7 +72,7 @@ def maskablePPO_step_prediction(
 
 
 def maskablePPO_episode(
-    start_state: State,
+    start_state: State | State_norm,
     agent: MaskablePPO,
     env: gym.Env,
     deterministic: bool = True,
@@ -84,7 +84,7 @@ def maskablePPO_episode(
 
     Parameters
     ----------
-    start_state: State
+    start_state: State | State_norm
         State to start the episode from.
     agent: MaskablePPO
         Agent to employ during the episode.
@@ -101,7 +101,7 @@ def maskablePPO_episode(
         Deque with the action name of each step.
     episode_state1s : deque
         Deque with the feature 1 of the state in each step.
-    episode_state1s : deque
+    episode_state2s : deque
         Deque with the feature 2 of the state in each step.
     episode_rewards : deque
         Deque with the reward of each step.

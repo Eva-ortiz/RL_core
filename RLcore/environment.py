@@ -1,4 +1,5 @@
 import logging
+from collections import deque
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -37,6 +38,34 @@ class Setup_mode(StrEnum):
     RESET = "reset"
 
 
+class StatesMemory:
+    """Store stack of states.
+
+    Useful to capture state sequential information such as temporal dependence.
+
+    References
+    ----------
+    .. [1] https://docs.python.org/3/library/collections.html#collections.deque
+    """
+
+    def __init__(self, capacity):
+        self.memory = deque(maxlen=capacity)
+
+    def push(self, state: State | State_norm):
+        """Save state / normalized state.
+
+        Save normalized state is recommended.
+
+        When `capacity` is reached, `deque` iterator automatically remove older
+        elements when new ones are appended. [1]
+        """
+        self.memory.append(state)
+
+    def __len__(self):
+        """Memory len."""
+        return len(self.memory)
+
+
 class ENV(gym.Env):  # type: ignore[type-arg]
     """Custom Environment that follows Gymnasium interface.
 
@@ -67,6 +96,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         start_env: Environment | Literal["random"] = "random",
         env_idx: int | None = None,
         global_obs: bool = False,
+        n_states_stack: int | None = None,
         conf_path: str = "./config.toml",
     ) -> None:
         """Environment.
@@ -88,6 +118,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             the current state (single observation), it includes features of
             overall environment. If False, only the single observation is used.
             By default, False.
+        n_states_stack : int | None, optional
+            If set, the observation is the stack of the last `n_states_stack`
+            normalized states (flattened), to capture sequential information
+            such as temporal dependence. If None, only the current state is
+            used. By default, None.
         conf_path : str, optional
             Path to config file, by default "./config.toml".
 
@@ -104,6 +139,9 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         # store whether to use global observations
         self.global_obs = global_obs
+
+        # number of stacked states in the observation (None for single state)
+        self.n_states_stack = n_states_stack
 
         # store relevant names
         self.action_col = "TODO : str"
@@ -177,8 +215,15 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         higher_bound = [1] * len(self.single_state_cols) + (
             [1] * n_global_feat * n_actions if self.global_obs else []
         )  # [4 EXAMPLE]
+
+        # if `n_states_stack`, the observation stacks the last `n_states_stack`
+        # normalized states, so its bounds are repeated that many times
+        n_stack = self.n_states_stack if self.n_states_stack is not None else 1
+
         self.observation_space = gym.spaces.Box(
-            low=np.array(lower_bound), high=np.array(higher_bound), dtype=np.float64
+            low=np.array(lower_bound * n_stack),  # [4 EXAMPLE]
+            high=np.array(higher_bound * n_stack),  # [4 EXAMPLE]
+            dtype=np.float64,
         )  # [4]
 
     def action_idx_to_name(self, action_idx: int) -> str:
@@ -290,6 +335,17 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self._visited_actions_memory = {
             self.action_name_to_idx(self.current_env[self.action_col])
         }
+
+        if self.n_states_stack is not None:
+            # initialize normalized states memory
+            self._norm_states_memory = StatesMemory(capacity=self.n_states_stack)
+            # add the first state as many times as the stack capacity, providing
+            # a static start history
+            for _ in range(self.n_states_stack):
+                self._norm_states_memory.push(norm_state)
+            # define `norm_state` with the current stack of states
+            norm_state = np.array(self._norm_states_memory.memory).flatten()
+
         return norm_state
 
     def step(
@@ -365,6 +421,12 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         norm_next_state = self._normalize_state_values(self.current_env)
 
         self.current_env[self.env_cols] = "TODO : Environment"  # [4 EXAMPLE]
+
+        # if states stack, push the new state and stack the last `n_states_stack`
+        if self.n_states_stack is not None:
+            self._norm_states_memory.push(norm_next_state)
+            # define `norm_next_state` with current stack of states
+            norm_next_state = np.array(self._norm_states_memory.memory).flatten()
 
         # add termination / truncated conditions
         terminated = "TODO : boolean comparison (e.g.)"  # [4 EXAMPLE]
