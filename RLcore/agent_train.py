@@ -325,6 +325,7 @@ def maskablePPO_train(
     .. [8] https://optuna.readthedocs.io/en/stable/faq.html#how-can-i-obtain-reproducible-optimization-results
     .. [9] https://optuna.readthedocs.io/en/stable/faq.html#how-are-exceptions-from-trials-handled
     .. [10] https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecenv-api-vs-gym-api
+    .. [11] https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#custom-networks
     """
     ppo_cfg = load_conf(cfg_path)["agent"]["PPO"]
 
@@ -400,6 +401,7 @@ def maskablePPO_train(
                 policy="MlpPolicy",
                 env=agent_env,
                 verbose=0,
+                policy_kwargs={"net_arch": ppo_cfg.get("net_arch")},  # [11]
                 seed=ppo_cfg["seed"],
                 _init_setup_model=True,
                 **trial_params,
@@ -489,6 +491,7 @@ def maskablePPO_train(
             policy="MlpPolicy",
             env=monitored_env,
             verbose=2 if verbose else 1,
+            policy_kwargs={"net_arch": ppo_cfg.get("net_arch")},  # [11]
             seed=ppo_cfg["seed"],
             _init_setup_model=True,
             **train_params,
