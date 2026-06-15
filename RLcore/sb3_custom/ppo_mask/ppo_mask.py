@@ -1,5 +1,6 @@
 import logging
 from math import inf  # new
+from timeit import default_timer  # new
 from typing import TypeVar
 
 import gymnasium as gym
@@ -86,6 +87,7 @@ class MaskablePPO_custom(MaskablePPO):
         iteration = 0
         greedy_return = None  # new
         max_greedy_return = -inf  # new
+        learn_start = default_timer()  # new
 
         total_timesteps, callback = self._setup_learn(
             total_timesteps,
@@ -157,5 +159,12 @@ class MaskablePPO_custom(MaskablePPO):
             self.logger.record("train/n_experiences", self.num_timesteps)  # new
 
         callback.on_training_end()
+
+        learn_end = default_timer()  # new
+        learn_time = learn_end - learn_start  # new
+        days, hours, minutes = sec_2_day_hour_min(learn_time)  # new
+        logging.info(
+            f"Total learning elapsed time: {days}:{hours}:{minutes:.3f}"
+        )  # new
 
         return self
