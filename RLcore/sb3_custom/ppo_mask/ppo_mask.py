@@ -50,6 +50,7 @@ class MaskablePPO_custom(MaskablePPO):
 
         terminated, truncated = False, False
         rewards = []
+        action_masks = None
         while not terminated and not truncated:
             # This is the only change related to invalid action masking
             # (comment from sb3_contrib.MaskablePPO)
