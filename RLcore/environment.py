@@ -572,6 +572,55 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         )
         return norm_state
 
+    def _normalize_state_values_global(
+        self,
+        all_action_names: np.typing.ArrayLike,
+        state_global: State,
+        norm_single_state: State_norm,
+    ) -> State_norm:
+        """Normalize each one of the global-observation state variables.
+        
+        Example when it is composed of a set of features per possible action.
+
+        Parameters
+        ----------
+        all_action_names : np.typing.ArrayLike
+            Names of all actions in the environment.
+        state_global : State
+            Environment description. Must contain, at least, the
+            `self.global_state_cols` not already in `self.single_state_cols`.
+        norm_single_state : State_norm
+            Normalized values of the single observation.
+
+        Returns
+        -------
+        State_norm
+            Normalized observation with single and global components.
+        """
+        # check expected cols are in input state
+        assert set(self.global_state_cols).issubset(
+            set(self.single_state_cols) | set(state_global.index)
+        ), f"Expected {self.global_state_cols} in input state."
+
+        # initialize array of storage
+        norm_state = np.concatenate(
+            (
+                norm_single_state,
+                np.zeros(shape=(len(self.global_feat_cols) * len(all_action_names))),
+            )
+        )
+
+        # obtain the order of each variable in the state array [8]
+        sorter = np.argsort(self.global_state_cols)
+        for action_name in all_action_names:
+            global_cols = [f"{feat}_{action_name}" for feat in self.global_feat_cols]
+            idxs = sorter[
+                np.searchsorted(self.global_state_cols, global_cols, sorter=sorter)
+            ]
+            # normalize each per-action global feature [4 EXAMPLE]
+            norm_state[idxs] = state_global[global_cols].to_numpy() # / MAX VALUES
+        return norm_state
+
     def _termination(self, state: State) -> bool:
         """Return a flag indicating if termination has been reached.
 
