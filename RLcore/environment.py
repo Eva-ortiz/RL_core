@@ -618,7 +618,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                 np.searchsorted(self.global_state_cols, global_cols, sorter=sorter)
             ]
             # normalize each per-action global feature [4 EXAMPLE]
-            norm_state[idxs] = state_global[global_cols].to_numpy() # / MAX VALUES
+            norm_state[idxs] = state_global[global_cols].to_numpy() # TODO: / MAX VALUES
         return norm_state
 
     def _termination(self, state: State) -> bool:
