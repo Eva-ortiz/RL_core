@@ -519,13 +519,14 @@ def maskablePPO_train(
             **train_params,
         )
         # train it and capture training outputs
+        greedy_env = env(**env_kwargs)
         with Capturing() as learn_outputs:
             agent.learn(
                 total_timesteps=ppo_cfg["total_timesteps"],
                 progress_bar=verbose,
                 use_masking=use_masking,
                 greedy_check_interval=ppo_cfg["greedy_check_interval"],
-                greedy_env=env(**env_kwargs),
+                greedy_env=greedy_env,
             )
     # save it
     agent.save(f"{path_out}/{path_out.stem}")
@@ -534,6 +535,7 @@ def maskablePPO_train(
         n_explored_episodes = env_monitor_outputs(monitored_env, env, path_out, verbose)
         agent_training_outputs(learn_outputs, agent, path_out)
 
+    greedy_env.close()
     monitored_env.close()
     return (
         agent,
