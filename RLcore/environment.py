@@ -95,6 +95,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         action_names: np.typing.ArrayLike,
         start_env: Environment | Literal["random"] = "random",
         env_idx: int | None = None,
+        n_states_stack: int | None = None,
         conf_path: str = "./config.toml",
     ) -> None:
         """Environment.
@@ -111,6 +112,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             Index of environment. Useful to keep track of logging of each
             environment when vectorized environments are used. If None, do not
             display any idx. By default, None.
+        n_states_stack : int | None, optional
+            If set, the observation is the stack of the last `n_states_stack`
+            normalized states (flattened), to capture sequential information
+            such as temporal dependence. If None, only the current state is
+            used. By default, None.
         conf_path : str, optional
             Path to config file, by default "./config.toml".
 
@@ -124,6 +130,9 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         # load config
         self.conf = load_conf(conf_path)["environment"]
+
+        # number of stacked states in the observation (None for single state)
+        self.n_states_stack = n_states_stack
 
         # store relevant names
         self.action_col = "TODO : str"
@@ -152,9 +161,12 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         # State space composed by continuous values
         # We will usually normalize its values [1]
+        # if `n_states_stack`, the observation stacks the last `n_states_stack`
+        # normalized states, so its bounds are repeated that many times
+        n_stack = self.n_states_stack if self.n_states_stack is not None else 1
         self.observation_space = gym.spaces.Box(
-            low=np.array([-1] * len(self.state_cols)),  # [4 EXAMPLE]
-            high=np.array([1] * len(self.state_cols)),  # [4 EXAMPLE]
+            low=np.array([-1] * len(self.state_cols) * n_stack),  # [4 EXAMPLE]
+            high=np.array([1] * len(self.state_cols) * n_stack),  # [4 EXAMPLE]
             dtype=np.float64,
         )  # [4]
 
