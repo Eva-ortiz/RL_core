@@ -215,11 +215,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         higher_bound = [1] * len(self.single_state_cols) + (
             [1] * n_global_feat * n_actions if self.global_obs else []
         )  # [4 EXAMPLE]
-        
+
         # if `n_states_stack`, the observation stacks the last `n_states_stack`
         # normalized states, so its bounds are repeated that many times
         n_stack = self.n_states_stack if self.n_states_stack is not None else 1
-        
+
         self.observation_space = gym.spaces.Box(
             low=np.array(lower_bound * n_stack),  # [4 EXAMPLE]
             high=np.array(higher_bound * n_stack),  # [4 EXAMPLE]
@@ -421,12 +421,6 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         norm_next_state = self._normalize_state_values(self.current_env)
 
         self.current_env[self.env_cols] = "TODO : Environment"  # [4 EXAMPLE]
-
-        # if states stack, push the new state and stack the last `n_states_stack`
-        if self.n_states_stack is not None:
-            self._norm_states_memory.push(norm_next_state)
-            # define `norm_next_state` with current stack of states
-            norm_next_state = np.array(self._norm_states_memory.memory).flatten()
 
         # if states stack, push the new state and stack the last `n_states_stack`
         if self.n_states_stack is not None:
