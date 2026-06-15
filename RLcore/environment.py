@@ -362,6 +362,12 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             self.current_env[self.state_cols]
         )
 
+        # if states stack, push the new state and stack the last `n_states_stack`
+        if self.n_states_stack is not None:
+            self._norm_states_memory.push(norm_next_state)
+            # define `norm_next_state` with current stack of states
+            norm_next_state = np.array(self._norm_states_memory.memory).flatten()
+
         # add termination / truncated conditions
         terminated = "TODO : boolean comparison (e.g.)"  # [4 EXAMPLE]
         if terminated:
