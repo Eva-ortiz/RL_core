@@ -95,6 +95,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         action_names: np.typing.ArrayLike,
         start_env: Environment | Literal["random"] = "random",
         env_idx: int | None = None,
+        global_obs: bool = False,
         n_states_stack: int | None = None,
         conf_path: str = "./config.toml",
     ) -> None:
@@ -112,6 +113,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             Index of environment. Useful to keep track of logging of each
             environment when vectorized environments are used. If None, do not
             display any idx. By default, None.
+        global_obs : bool, optional
+            If True, the observation is a global one: besides the features of
+            the current state (single observation), it includes features of
+            overall environment. If False, only the single observation is used.
+            By default, False.
         n_states_stack : int | None, optional
             If set, the observation is the stack of the last `n_states_stack`
             normalized states (flattened), to capture sequential information
@@ -131,23 +137,59 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # load config
         self.conf = load_conf(conf_path)["environment"]
 
+        # store whether to use global observations
+        self.global_obs = global_obs
+
         # number of stacked states in the observation (None for single state)
         self.n_states_stack = n_states_stack
 
         # store relevant names
         self.action_col = "TODO : str"
         self.state_col_1, self.state_col_2 = "TODO : str", "TODO : str"
-
-        # WARNING: `self.state_cols` order is VERY VERY VERY important for the
-        # remaining pipeline
-        self.state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
-        self.env_cols = self.state_cols + ["TODO : str", "TODO : str"]  # [4 EXAMPLE]
+        self.global_state_col_1, self.global_state_col_2 = (
+            "TODO : str",
+            "TODO : str",
+        )  # if `global_obs`
 
         # Store relation between action number and its name, sorted
         # alphabetically
         self._action_name_dict = {
             idx: name for idx, name in enumerate(np.sort(action_names))
         }
+
+        # WARNING: `self.single_state_cols` and `self.global_state_cols` order is
+        # VERY VERY VERY important for the remaining pipeline
+
+        # single observation: features of the current state
+        self.single_state_cols = [self.state_col_1, self.state_col_2]  # [4 EXAMPLE]
+        # global features, only used when `global_obs` is True
+        self.global_feat_cols = [
+            self.global_state_col_1,
+            self.global_state_col_2,
+        ]  # [4 EXAMPLE]
+        # Global observation: single observation + the global features (only
+        # when `global_obs` is selected).
+        # Here we provide an example where there is a feature associated with
+        # each possible action (eg. position, predicted quantity of the
+        # reward...)
+        self.global_state_cols = np.concatenate(
+            [self.single_state_cols]
+            + (
+                [
+                    [
+                        f"{self.global_state_col_1}_{action_name}",
+                        f"{self.global_state_col_2}_{action_name}",
+                    ]  # [4 EXAMPLE]
+                    for action_name in self._action_name_dict.values()
+                ]
+                if self.global_obs
+                else []
+            )
+        ).tolist()
+        self.env_cols = self.global_state_cols + [
+            "TODO : str",
+            "TODO : str",
+        ]  # [4 EXAMPLE]
 
         # initialize some counters, store current and initial environment and
         # state info, and initialize visited actions memory
@@ -161,12 +203,26 @@ class ENV(gym.Env):  # type: ignore[type-arg]
 
         # State space composed by continuous values
         # We will usually normalize its values [1]
+        # If `global_obs`, the single observation is extended with
+        # `len(global_state_cols)` features.
+        # Remember we have the example where there is a set of features per
+        # possible action, that's the reason for `n_global * n_actions` features.
+        n_actions = np.size(action_names)
+        n_global_feat = len(self.global_feat_cols)
+        lower_bound = [-1] * len(self.single_state_cols) + (
+            [-1] * n_global_feat * n_actions if self.global_obs else []
+        )  # [4 EXAMPLE]
+        higher_bound = [1] * len(self.single_state_cols) + (
+            [1] * n_global_feat * n_actions if self.global_obs else []
+        )  # [4 EXAMPLE]
+        
         # if `n_states_stack`, the observation stacks the last `n_states_stack`
         # normalized states, so its bounds are repeated that many times
         n_stack = self.n_states_stack if self.n_states_stack is not None else 1
+        
         self.observation_space = gym.spaces.Box(
-            low=np.array([-1] * len(self.state_cols) * n_stack),  # [4 EXAMPLE]
-            high=np.array([1] * len(self.state_cols) * n_stack),  # [4 EXAMPLE]
+            low=np.array(lower_bound * n_stack),  # [4 EXAMPLE]
+            high=np.array(higher_bound * n_stack),  # [4 EXAMPLE]
             dtype=np.float64,
         )  # [4]
 
@@ -236,9 +292,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                 # define the initial environment
                 self.init_env = start_env
                 # and the initial state
-                self.init_state = self._normalize_state_values(
-                    start_env[self.state_cols]
-                )
+                self.init_state = self._normalize_state_values(start_env)
 
         # set current environment to that specified, ignoring `init_env` and
         # `init_state` info
@@ -249,18 +303,18 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                 )
             self.current_env = current_env
             # compute norm_state for later return
-            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
+            norm_state = self._normalize_state_values(self.current_env)
 
         # in randomly initialized environment, `init_state` is None together
         # with `init_env`
         elif self.init_env is None and self.init_state is None:
             # define a random current environment state
             current_env = self._random_env_state()
-            while self._termination(current_env[self.state_cols]):
+            while self._termination(current_env[self.single_state_cols]):
                 current_env = self._random_env_state()
             self.current_env = current_env
             # compute norm_state for later return
-            norm_state = self._normalize_state_values(self.current_env[self.state_cols])
+            norm_state = self._normalize_state_values(self.current_env)
 
         # in static initial env, `init_state` is NOT None together with `init_env`
         elif self.init_env is not None and self.init_state is not None:
@@ -353,14 +407,26 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         logging.debug(self.envidx_logging + f"Return: {self.rl_return}")
 
         # ------- UPDATE VALUES -------
-        # Store next and not normalized environment info in `current_env`
-        self.current_env[self.state_cols] = next_state[self.state_cols]
+        # reset current env in order to store the new one
+        self.current_env = pd.Series(index=self.env_cols, dtype="object")
+        # Store next and not normalized single-observation info in `current_env`
+        self.current_env[self.single_state_cols] = next_state[self.single_state_cols]
+
+        # if global observation, recompute and store the global features at
+        # the new state (they may change at every step)
+        if self.global_obs:
+            self.current_env[self.global_state_cols] = "TODO : State"
+
+        # normalize the observation (single, plus global features if `global_obs`)
+        norm_next_state = self._normalize_state_values(self.current_env)
+
         self.current_env[self.env_cols] = "TODO : Environment"  # [4 EXAMPLE]
 
-        # normalize each variable of the state
-        norm_next_state = self._normalize_state_values(
-            self.current_env[self.state_cols]
-        )
+        # if states stack, push the new state and stack the last `n_states_stack`
+        if self.n_states_stack is not None:
+            self._norm_states_memory.push(norm_next_state)
+            # define `norm_next_state` with current stack of states
+            norm_next_state = np.array(self._norm_states_memory.memory).flatten()
 
         # if states stack, push the new state and stack the last `n_states_stack`
         if self.n_states_stack is not None:
@@ -503,7 +569,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             {self.env_cols[idx]: val for idx, val in enumerate(rand_values)}
         )
 
-        # remember: defined state must contain `state_cols`
+        # remember: defined state must contain `single_state_cols` (and
+        # `global_state_cols` when `global_obs` is selected)
         assert set(self.env_cols) == set(
             env.index
         ), f"Environment must be composed of {self.env_cols} fields."
@@ -515,27 +582,50 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         Parameters
         ----------
         state : State
-            Description of the state. Must be given with `self.state_cols`
-            variables.
+            State description. Must contain `self.single_state_cols` and
+            also `self.global_state_cols`, if apply.
 
         Returns
         -------
         State_norm
-            Normalized state values.
+            Normalized observation values.
+        """
+        norm_state = self._normalize_state_values_single(state[self.single_state_cols])
+        if self.global_obs:
+            norm_state = self._normalize_state_values_global(
+                all_action_names=self._action_name_dict.values(),
+                state_global=state[self.global_state_cols],
+                norm_single_state=norm_state,
+            )
+        return norm_state
+
+    def _normalize_state_values_single(self, state: State) -> State_norm:
+        """Normalize each one of the single-observation state variables.
+
+        Parameters
+        ----------
+        state : State
+            Description of the state. Must be given with
+            `self.single_state_cols` variables.
+
+        Returns
+        -------
+        State_norm
+            Normalized single-observation values.
         """
         # check expected cols are in input state
-        assert set(self.state_cols) == (
+        assert set(self.single_state_cols).issubset(
             set(state.index)
-        ), f"Expected {self.state_cols} in input state."
+        ), f"Expected {self.single_state_cols} in input state."
 
         # initialize array of storage
-        norm_state = np.zeros(shape=len(self.state_cols))
+        norm_state = np.zeros(shape=len(self.single_state_cols))
 
         # obtain the order of each variable in the state array [8]
-        sorter = np.argsort(self.state_cols)
+        sorter = np.argsort(self.single_state_cols)
         var_idx_1, var_idx_2 = sorter[
             np.searchsorted(
-                self.state_cols,
+                self.single_state_cols,
                 [self.state_col_1, self.state_col_2],
                 sorter=sorter,
             )
@@ -550,6 +640,58 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         norm_state[var_idx_2] = np.sin(
             2 * np.pi * state[self.state_col_2] / periodicity_var_2
         )
+        return norm_state
+
+    def _normalize_state_values_global(
+        self,
+        all_action_names: np.typing.ArrayLike,
+        state_global: State,
+        norm_single_state: State_norm,
+    ) -> State_norm:
+        """Normalize each one of the global-observation state variables.
+
+        In this example, the global observation is composed of a set of
+        features per possible action.
+
+        Parameters
+        ----------
+        all_action_names : np.typing.ArrayLike
+            Names of all actions in the environment.
+        state_global : State
+            Environment description. Must contain, at least, the
+            `self.global_state_cols` not already in `self.single_state_cols`.
+        norm_single_state : State_norm
+            Normalized values of the single observation.
+
+        Returns
+        -------
+        State_norm
+            Normalized observation with single and global components.
+        """
+        # check expected cols are in input state
+        assert set(self.global_state_cols).issubset(
+            set(self.single_state_cols) | set(state_global.index)
+        ), f"Expected {self.global_state_cols} in input state."
+
+        # initialize array of storage
+        norm_state = np.concatenate(
+            (
+                norm_single_state,
+                np.zeros(shape=(len(self.global_feat_cols) * len(all_action_names))),
+            )
+        )
+
+        # obtain the order of each variable in the state array [8]
+        sorter = np.argsort(self.global_state_cols)
+        for action_name in all_action_names:
+            global_cols = [f"{feat}_{action_name}" for feat in self.global_feat_cols]
+            idxs = sorter[
+                np.searchsorted(self.global_state_cols, global_cols, sorter=sorter)
+            ]
+            # normalize each per-action global feature [4 EXAMPLE]
+            norm_state[idxs] = state_global[
+                global_cols
+            ].to_numpy()  # TODO: / MAX VALUES
         return norm_state
 
     def _termination(self, state: State) -> bool:
