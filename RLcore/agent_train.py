@@ -316,7 +316,8 @@ def maskablePPO_train(
         Path where the trained agent and monitor plots/csv will be saved, by
         default Path("./models/maskedppo").
     **env_kwargs
-        Inputs of input `env`, if necessary.
+        Inputs forwarded to the environment constructor (``env(**env_kwargs)``),
+        such as ``start_env``, ``global_obs`` or ``n_states_stack``.
 
     Return
     ------

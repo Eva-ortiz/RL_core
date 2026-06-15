@@ -157,7 +157,8 @@ def approximated_simulation(
         Seed number along the simulation. If None, do not fix any seed.
         By default, None.
     **env_kwargs
-        Environment inputs.
+        Inputs forwarded to the environment constructor (``env(**env_kwargs)``),
+        such as ``start_env``, ``global_obs`` or ``n_states_stack``.
 
     Returns
     -------
