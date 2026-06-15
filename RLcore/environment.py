@@ -354,8 +354,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # Store next and not normalized single-observation info in `current_env`
         self.current_env[self.single_state_cols] = next_state[self.single_state_cols]
 
-        # If global observation, recompute and store the global features at the new state.
-        # This has to be done as they probably change at every step.
+        # if global observation, recompute and store the global features at
+        # the new state (they may change at every step)
         if self.global_obs:
             self.current_env[self.global_state_cols] = "TODO : State"
 
@@ -525,7 +525,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             norm_state = self._normalize_state_values_global(
                 all_action_names=self._action_name_dict.values(),
                 state_global=state[self.global_state_cols],
-                norm_single_state=norm_state
+                norm_single_state=norm_state,
             )
         return norm_state
 
@@ -579,8 +579,9 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         norm_single_state: State_norm,
     ) -> State_norm:
         """Normalize each one of the global-observation state variables.
-        
-        Example when it is composed of a set of features per possible action.
+
+        In this example, the global observation is composed of a set of
+        features per possible action.
 
         Parameters
         ----------
@@ -618,7 +619,9 @@ class ENV(gym.Env):  # type: ignore[type-arg]
                 np.searchsorted(self.global_state_cols, global_cols, sorter=sorter)
             ]
             # normalize each per-action global feature [4 EXAMPLE]
-            norm_state[idxs] = state_global[global_cols].to_numpy() # TODO: / MAX VALUES
+            norm_state[idxs] = state_global[
+                global_cols
+            ].to_numpy()  # TODO: / MAX VALUES
         return norm_state
 
     def _termination(self, state: State) -> bool:
