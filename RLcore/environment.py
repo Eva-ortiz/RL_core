@@ -512,7 +512,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         Parameters
         ----------
         state : State
-            State description. Must contain `self.single_state_cols` and 
+            State description. Must contain `self.single_state_cols` and
             also `self.global_state_cols`, if apply.
 
         Returns
