@@ -351,6 +351,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         logging.debug(self.envidx_logging + f"Return: {self.rl_return}")
 
         # ------- UPDATE VALUES -------
+        # reset current env in order to store the new one
+        self.current_env = pd.Series(index=self.env_cols, dtype="object")
         # Store next and not normalized single-observation info in `current_env`
         self.current_env[self.single_state_cols] = next_state[self.single_state_cols]
 
