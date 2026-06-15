@@ -90,6 +90,8 @@ def agent_training_outputs(
         "clip_range",
         "learning_rate",
         "greedy_test",
+        "greedy_n_experiences",
+        "greedy_n_updates",
     ] + (["clip_range_vf"] if agent.clip_range_vf is not None else [])
     learning_curves = dict()
     # look for var names and their values in a string of format
@@ -111,6 +113,13 @@ def agent_training_outputs(
                 else:
                     learning_curves[variable] = [float(value)]
 
+    # pop greedy_test before the length check: it may have fewer entries
+    # (only recorded on greedy check iterations) or be absent entirely
+    # (greedy_check_interval=None)
+    greedy_test_values = learning_curves.pop("greedy_test", None)
+    greedy_x_experiences = learning_curves.pop("greedy_n_experiences", None)
+    greedy_x_updates = learning_curves.pop("greedy_n_updates", None)
+
     # check all learning curves have the same length
     curves_lens = [len(record) for record in learning_curves.values()]
     assert all(
@@ -125,21 +134,18 @@ def agent_training_outputs(
 
     # plot variables as a function of n_updates
     for var_name, values in learning_curves.items():
-        if var_name == "greedy_test":
-            ylabel = "greedy_test episode return (a.u.)"
-        else:
-            ylabel = (
-                var_name
-                if var_name
-                in [
-                    "learning_rate",
-                    "loss",
-                    "explained_variance",
-                    "clip_range",
-                    "clip_range_vf",
-                ]
-                else f"{var_name}\n(mean of a window of {agent.n_epochs} updates)"
-            )
+        ylabel = (
+            var_name
+            if var_name
+            in [
+                "learning_rate",
+                "loss",
+                "explained_variance",
+                "clip_range",
+                "clip_range_vf",
+            ]
+            else f"{var_name}\n(mean of a window of {agent.n_epochs} updates)"
+        )
         # plot and save the figures of previous information
         plt.figure()
         plt.xlabel("Number of network updates")
@@ -147,21 +153,40 @@ def agent_training_outputs(
         plt.plot(x_updates, values)
         plt.tight_layout()
         plt.savefig(f"{path_out}/{var_name}_vs_n_updates.png")
+        plt.close()
 
         # write it into a csv
         df_training_updates[var_name] = values
     df_training_updates.to_csv(f"{path_out}/learning_curves_update_data.csv")
 
-    # plot the greedy test as a function of n_experiences
-    plt.figure()
-    plt.xlabel("Number of training experiences")
-    plt.ylabel("greedy_test episode return (a.u.)")
-    plt.plot(x_experiences, learning_curves["greedy_test"])
-    plt.tight_layout()
-    plt.savefig(f"{path_out}/greedy_test_vs_n_experiences.png")
+    # plot greedy test value as a function of number of training experiences
+    # and number of network updates
+    if greedy_test_values is not None:
+        # greedy_test vs n_experiences
+        plt.figure()
+        plt.xlabel("Number of training experiences")
+        plt.ylabel("greedy_test episode return (a.u.)")
+        plt.plot(greedy_x_experiences, greedy_test_values)
+        plt.tight_layout()
+        plt.savefig(f"{path_out}/greedy_test_vs_n_experiences.png")
+        plt.close()
 
-    # write it into a csv
-    df_training_experiences["greedy_test"] = learning_curves["greedy_test"]
+        # greedy_test vs n_updates
+        plt.figure()
+        plt.xlabel("Number of network updates")
+        plt.ylabel("greedy_test episode return (a.u.)")
+        plt.plot(greedy_x_updates, greedy_test_values)
+        plt.tight_layout()
+        plt.savefig(f"{path_out}/greedy_test_vs_n_updates.png")
+        plt.close()
+
+        # write it into a csv
+        df_training_experiences["greedy_test_values"] = pd.Series(greedy_test_values)
+        df_training_experiences["greedy_n_train_experiences"] = pd.Series(
+            greedy_x_experiences
+        )
+        df_training_experiences["greedy_n_train_updates"] = pd.Series(greedy_x_updates)
+
     df_training_experiences.to_csv(f"{path_out}/learning_curves_experience_data.csv")
 
 
@@ -552,13 +577,14 @@ def maskablePPO_train(
             **train_params,
         )
         # train it and capture training outputs
+        greedy_env = env(**env_kwargs)
         with Capturing() as learn_outputs:
             agent.learn(
                 total_timesteps=ppo_cfg["total_timesteps"],
                 progress_bar=verbose,
                 use_masking=use_masking,
                 greedy_check_interval=ppo_cfg["greedy_check_interval"],
-                greedy_env=env(**env_kwargs),
+                greedy_env=greedy_env,
             )
     # save it
     agent.save(f"{path_out}/{path_out.stem}")
@@ -567,6 +593,7 @@ def maskablePPO_train(
         n_explored_episodes = env_monitor_outputs(monitored_env, env, path_out, verbose)
         agent_training_outputs(learn_outputs, agent, path_out)
 
+    greedy_env.close()
     monitored_env.close()
     return (
         agent,
