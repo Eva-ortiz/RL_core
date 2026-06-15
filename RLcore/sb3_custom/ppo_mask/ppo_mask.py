@@ -7,7 +7,6 @@ import gymnasium as gym
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3.common.type_aliases import MaybeCallback
-
 from utils import sec_2_day_hour_min  # new
 
 SelfMaskablePPO = TypeVar("SelfMaskablePPO", bound="MaskablePPO")

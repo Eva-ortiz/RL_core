@@ -89,4 +89,4 @@ seed_optuna = 0
 n_trials = 20
 
 # agent monitorization
-greedy_check_interval = 1 # None to diable greedy test during training
+greedy_check_interval = 1 # None to disable greedy test during training
