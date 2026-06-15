@@ -87,3 +87,6 @@ total_timesteps = 1e4
 # optuna
 seed_optuna = 0
 n_trials = 20
+
+# agent monitorization
+greedy_check_interval = 1 # None to diable greedy test during training
