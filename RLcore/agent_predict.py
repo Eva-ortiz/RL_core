@@ -50,7 +50,8 @@ def maskablePPO_step_prediction(
     .. [2] https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
     """
     if isinstance(state, State):
-        norm_state = env._normalize_state_values(state[env.state_cols])
+        # single observation, plus global features if `env.global_obs`
+        norm_state = env._normalize_state_values(state)
     elif isinstance(state, State_norm):
         norm_state = state
     else:
