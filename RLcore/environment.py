@@ -351,14 +351,18 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         logging.debug(self.envidx_logging + f"Return: {self.rl_return}")
 
         # ------- UPDATE VALUES -------
-        # Store next and not normalized environment info in `current_env`
-        self.current_env[self.state_cols] = next_state[self.state_cols]
-        self.current_env[self.env_cols] = "TODO : Environment"  # [4 EXAMPLE]
+        # Store next and not normalized single-observation info in `current_env`
+        self.current_env[self.single_state_cols] = next_state[self.single_state_cols]
 
-        # normalize each variable of the state
-        norm_next_state = self._normalize_state_values(
-            self.current_env[self.state_cols]
-        )
+        # If global observation, recompute and store the global features at the new state.
+        # This has to be done as they probably change at every step.
+        if self.global_obs:
+            self.current_env[self.global_state_cols] = "TODO : State"
+
+        # normalize the observation (single, plus global features if `global_obs`)
+        norm_next_state = self._normalize_state_values(self.current_env)
+
+        self.current_env[self.env_cols] = "TODO : Environment"  # [4 EXAMPLE]
 
         # add termination / truncated conditions
         terminated = "TODO : boolean comparison (e.g.)"  # [4 EXAMPLE]
