@@ -693,7 +693,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             # normalize each per-action global feature [4 EXAMPLE]
             norm_state[idxs] = state_global[
                 global_cols
-            ].to_numpy()  # Developer instruction: divide by the max values (/ MAX_VALUES)
+            ].to_numpy()  # Developer instruction: / MAX_VALUES
         return norm_state
 
     def _termination(self, state: State) -> bool:
