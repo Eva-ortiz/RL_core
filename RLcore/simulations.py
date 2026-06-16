@@ -44,7 +44,7 @@ def maskedPPO_agent(
     maskablePPO_episode : Simulate an episode with a trained agent.
     """
     # ------ INIT DATA ------
-    start_env = "TODO : Environment"
+    start_env = "Developer insert value: Environment"
 
     # ------ TRAIN ------
     if train:
@@ -270,21 +270,24 @@ def approximated_simulation(
 
 if __name__ == "__main__":
     maskedPPO_agent(
-        env="TODO : gym.Env class (not object)",
+        env="Developer insert value: gym.Env class (not object)",
         train=False,  # allow to train
         episode_eval=True,  # allow for greedy episode
         use_masking="TODO : depending of the env",
         monitor_train=True,
         verbose=False,
-        env_kwargs="TODO : env kwargs dict",
+        env_kwargs="Developer insert value: env kwargs dict",
     )
     approximated_simulation(
-        env="TODO : gym.Env class",
+        env="Developer insert value: gym.Env class",
         train=False,  # allow to train
         greedy_eval=True,  # allow for greedy episode
-        algorithm="TODO : Literal['Sarsa', 'Q-learning', 'double_Q-learning']",
+        algorithm=(
+            "Developer insert value: "
+            "Literal['Sarsa', 'Q-learning', 'double_Q-learning']"
+        ),
         monitor_train=True,
         logging_level="warn",
         seed=None,
-        env_kwargs="TODO : env kwargs dict",
+        env_kwargs="Developer insert value: env kwargs dict",
     )
