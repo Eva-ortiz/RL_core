@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 import gymnasium as gym
+import numpy as np
 import torch
 from agent_predict import maskablePPO_episode
 from agent_train import maskablePPO_train
@@ -43,7 +44,7 @@ def maskedPPO_agent(
     maskablePPO_episode : Simulate an episode with a trained agent.
     """
     # ------ INIT DATA ------
-    start_env = "TODO : Environment"
+    start_env = "Developer insert value: Environment"
 
     # ------ TRAIN ------
     if train:
@@ -74,14 +75,18 @@ def maskedPPO_agent(
             episode_rewards,
             info_list,
         ) = maskablePPO_episode(
-            start_state=start_env,
+            start_state=(
+                start_env
+                if env.n_states_stack is None
+                else np.array(env._norm_states_memory.memory).flatten()
+            ),  # CAUTION: if modified, make sure states stack has dtype `State_norm`
             agent=agent,
             env=env,
             deterministic=True,
             use_masking=use_masking,
         )
 
-        # TODO: post-process relevant data:
+        # Developer instruction: post-process relevant data:
         #   - policy representation: episode_actions, episode_state1s, episode_state2s
         #   - policy data : episode_rewards and return, training times, number
         #     of explored episodes
@@ -152,7 +157,8 @@ def approximated_simulation(
         Seed number along the simulation. If None, do not fix any seed.
         By default, None.
     **env_kwargs
-        Environment inputs.
+        Inputs forwarded to the environment constructor (``env(**env_kwargs)``),
+        such as ``start_env``, ``global_obs`` or ``n_states_stack``.
 
     Returns
     -------
@@ -264,21 +270,24 @@ def approximated_simulation(
 
 if __name__ == "__main__":
     maskedPPO_agent(
-        env="TODO : gym.Env class (not object)",
+        env="Developer insert value: gym.Env class (not object)",
         train=False,  # allow to train
         episode_eval=True,  # allow for greedy episode
-        use_masking="TODO : depending of the env",
+        use_masking="Developer instruction: set True/False depending on the env",
         monitor_train=True,
         verbose=False,
-        env_kwargs="TODO : env kwargs dict",
+        env_kwargs="Developer insert value: env kwargs dict",
     )
     approximated_simulation(
-        env="TODO : gym.Env class",
+        env="Developer insert value: gym.Env class",
         train=False,  # allow to train
         greedy_eval=True,  # allow for greedy episode
-        algorithm="TODO : Literal['Sarsa', 'Q-learning', 'double_Q-learning']",
+        algorithm=(
+            "Developer insert value: "
+            "Literal['Sarsa', 'Q-learning', 'double_Q-learning']"
+        ),
         monitor_train=True,
         logging_level="warn",
         seed=None,
-        env_kwargs="TODO : env kwargs dict",
+        env_kwargs="Developer insert value: env kwargs dict",
     )

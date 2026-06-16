@@ -12,13 +12,21 @@ Based on [Stable-Baselines3](https://stable-baselines3.readthedocs.io/en/master/
 Some related publications:
 
 - Ortiz-Mansilla, E. & García-Esteban, J.J. & Bravo-Abad, J. & Cuevas, J.C. (2024). Deep reinforcement learning for radiative heat transfer optimization problems. Physical Review Applied. 22. [10.1103/PhysRevApplied.22.054071](https://journals.aps.org/prapplied/abstract/10.1103/PhysRevApplied.22.054071).
+- Ortiz-Mansilla, E. & Torres-Barrán, A. & Cuevas, J.C (in preparation). A Deep Reinforcement Learning Approach to Fishing Vessel Route Optimization.
+
+The route optimization work above is built on the following `RLcore` modules:
+
+- `environment.py`: custom Gymnasium environment, with invalid action masking.
+- `agent_train.py`: agent training with Maskable PPO and Optuna hyperparameter optimization.
+- `agent_predict.py`: episode simulation with a trained agent.
+- `simulations.py`: orchestration of agent training and evaluation.
+- `sb3_custom/`: custom Maskable PPO, vectorized environment and monitor utilities.
+- `utils.py`: shared utilities.
 
 ## Structure
 
 The repository is structured into the following directories:
 
-- `/data`: data folder.
-- `/img`: images folder.
 - `/notebook`: notebooks with analysis, experiments or examples.
 - `/RLcore`: Python source code of the repository.
 - `/script`: `.sh` scripts.

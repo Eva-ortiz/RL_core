@@ -14,6 +14,18 @@ from matplotlib import pyplot
 # custom dtypes
 Timestamp = dt.date | dt.datetime | pd.Timestamp
 
+DAY_SECS = 60 * 60 * 24
+HOUR_SECS = 60 * 60
+MINUTE_SECS = 60
+
+
+def sec_2_day_hour_min(seconds: float) -> tuple[int, int, float]:
+    """Input seconds to return days/hours/mins."""
+    days = int(seconds // DAY_SECS)
+    hours = int(seconds % DAY_SECS // HOUR_SECS)
+    minutes = seconds % DAY_SECS % HOUR_SECS / MINUTE_SECS
+    return days, hours, minutes
+
 
 def find_exp(number) -> int:
     """Obtain the exponent from scientific notation.

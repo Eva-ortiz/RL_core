@@ -13,6 +13,7 @@ from sb3_custom.common.env_util import make_vec_env_custom
 from sb3_custom.common.monitor import Monitor_custom
 from sb3_custom.ppo_mask.ppo_mask import MaskablePPO_custom
 from stable_baselines3.common.logger import Logger
+from stable_baselines3.common.utils import get_linear_fn
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
 from utils import Capturing, check_bool_or_float, check_bool_or_int, load_conf, timer
 
@@ -89,6 +90,8 @@ def agent_training_outputs(
         "clip_range",
         "learning_rate",
         "greedy_test",
+        "greedy_n_experiences",
+        "greedy_n_updates",
     ] + (["clip_range_vf"] if agent.clip_range_vf is not None else [])
     learning_curves = dict()
     # look for var names and their values in a string of format
@@ -110,6 +113,13 @@ def agent_training_outputs(
                 else:
                     learning_curves[variable] = [float(value)]
 
+    # pop greedy_test before the length check: it may have fewer entries
+    # (only recorded on greedy check iterations) or be absent entirely
+    # (greedy_check_interval=None)
+    greedy_test_values = learning_curves.pop("greedy_test", None)
+    greedy_x_experiences = learning_curves.pop("greedy_n_experiences", None)
+    greedy_x_updates = learning_curves.pop("greedy_n_updates", None)
+
     # check all learning curves have the same length
     curves_lens = [len(record) for record in learning_curves.values()]
     assert all(
@@ -124,21 +134,18 @@ def agent_training_outputs(
 
     # plot variables as a function of n_updates
     for var_name, values in learning_curves.items():
-        if var_name == "greedy_test":
-            ylabel = "greedy_test episode return (a.u.)"
-        else:
-            ylabel = (
-                var_name
-                if var_name
-                in [
-                    "learning_rate",
-                    "loss",
-                    "explained_variance",
-                    "clip_range",
-                    "clip_range_vf",
-                ]
-                else f"{var_name}\n(mean of a window of {agent.n_epochs} updates)"
-            )
+        ylabel = (
+            var_name
+            if var_name
+            in [
+                "learning_rate",
+                "loss",
+                "explained_variance",
+                "clip_range",
+                "clip_range_vf",
+            ]
+            else f"{var_name}\n(mean of a window of {agent.n_epochs} updates)"
+        )
         # plot and save the figures of previous information
         plt.figure()
         plt.xlabel("Number of network updates")
@@ -146,27 +153,45 @@ def agent_training_outputs(
         plt.plot(x_updates, values)
         plt.tight_layout()
         plt.savefig(f"{path_out}/{var_name}_vs_n_updates.png")
+        plt.close()
 
         # write it into a csv
         df_training_updates[var_name] = values
     df_training_updates.to_csv(f"{path_out}/learning_curves_update_data.csv")
 
-    # plot the greedy test as a function of n_experiences
-    plt.figure()
-    plt.xlabel("Number of training experiences")
-    plt.ylabel("greedy_test episode return (a.u.)")
-    plt.plot(x_experiences, learning_curves["greedy_test"])
-    plt.tight_layout()
-    plt.savefig(f"{path_out}/greedy_test_vs_n_experiences.png")
+    # plot greedy test value as a function of number of training experiences
+    # and number of network updates
+    if greedy_test_values is not None:
+        # greedy_test vs n_experiences
+        plt.figure()
+        plt.xlabel("Number of training experiences")
+        plt.ylabel("greedy_test episode return (a.u.)")
+        plt.plot(greedy_x_experiences, greedy_test_values)
+        plt.tight_layout()
+        plt.savefig(f"{path_out}/greedy_test_vs_n_experiences.png")
+        plt.close()
 
-    # write it into a csv
-    df_training_experiences["greedy_test"] = learning_curves["greedy_test"]
+        # greedy_test vs n_updates
+        plt.figure()
+        plt.xlabel("Number of network updates")
+        plt.ylabel("greedy_test episode return (a.u.)")
+        plt.plot(greedy_x_updates, greedy_test_values)
+        plt.tight_layout()
+        plt.savefig(f"{path_out}/greedy_test_vs_n_updates.png")
+        plt.close()
+
+        # write it into a csv
+        df_training_experiences["greedy_test_values"] = pd.Series(greedy_test_values)
+        df_training_experiences["greedy_n_train_experiences"] = pd.Series(
+            greedy_x_experiences
+        )
+        df_training_experiences["greedy_n_train_updates"] = pd.Series(greedy_x_updates)
+
     df_training_experiences.to_csv(f"{path_out}/learning_curves_experience_data.csv")
 
 
 def env_monitor_outputs(
     monitored_env: VecEnv | Monitor_custom,
-    env: gym.Env,
     path_out: Path,
     verbose: bool = False,
 ):
@@ -177,8 +202,6 @@ def env_monitor_outputs(
     monitored_env : VecEnv | Monitor_custom
         Monitor wrapped gym environment, vectorized or not, where the agent is
         trained.
-    env : gym.Env
-        Gym environment where the agent is trained.
     path_out : Path
         Folder where monitor plots and csv will be saved.
     verbose : bool, optional
@@ -225,10 +248,17 @@ def env_monitor_outputs(
         # output the information of the episode with best return
         if verbose:
             idx_max_return = np.argmax(episode_records["episode_returns"])
-            action_list_max_return = [
-                env.action_idx_to_name(action_idx)
-                for action_idx in episode_records["episode_actions"][idx_max_return]
-            ]
+            best_actions = episode_records["episode_actions"][idx_max_return]
+            action_list_max_return = (
+                [
+                    monitored_env.env_method("action_idx_to_name", action)[n_env]
+                    for action in best_actions
+                ]
+                if isinstance(monitored_env, VecEnv)
+                else [
+                    monitored_env.action_idx_to_name(action) for action in best_actions
+                ]
+            )
             logging.info(
                 f"env {n_env}: Actions list of episode with max return\n"
                 f"{action_list_max_return}"
@@ -246,6 +276,7 @@ def env_monitor_outputs(
             plt.ylabel(ylabel)
             plt.plot(episode_records[var])
             plt.savefig(f"{path_out}/{ylabel.split(' ')[0]}_vs_episodes_env{n_env}.png")
+            plt.close()
 
         # write actions, rewards, returns, n_experiences and runtimes of each
         # episode during training into a csv
@@ -290,7 +321,8 @@ def maskablePPO_train(
         Path where the trained agent and monitor plots/csv will be saved, by
         default Path("./models/maskedppo").
     **env_kwargs
-        Inputs of input `env`, if necessary.
+        Inputs forwarded to the environment constructor (``env(**env_kwargs)``),
+        such as ``start_env``, ``global_obs`` or ``n_states_stack``.
 
     Return
     ------
@@ -313,6 +345,26 @@ def maskablePPO_train(
     not be retrieved. However, during training:
     * Missing uv data can be tracked setting logging level to DEBUG.
 
+    Notes
+    -----
+    **Learning rate scheduling** (``[agent.PPO.lr]`` section in config):
+
+    The learning rate can operate in two modes controlled by
+    ``lr_linear_schedule``:
+
+    * **Constant** (``lr_linear_schedule = false``): a fixed learning rate is
+      used throughout training. Only ``learning_rate`` is read; ``start``,
+      ``end`` and ``end_fraction`` are ignored.
+    * **Linear decay** (``lr_linear_schedule = true``): uses
+      ``stable_baselines3.common.utils.get_linear_fn`` [12] to build a callable
+      that linearly decays the learning rate from ``start`` to ``end`` over
+      the first ``end_fraction`` of training (as a fraction of total
+      timesteps), then holds the ``end`` value for the remainder. In this
+      mode ``learning_rate`` is ignored.
+
+    All numeric parameters follow the standard ``[min, max, log_scale]``
+    format for Optuna optimization. Use a scalar to fix the parameter.
+
     References
     ----------
     .. [1] https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
@@ -325,15 +377,45 @@ def maskablePPO_train(
     .. [8] https://optuna.readthedocs.io/en/stable/faq.html#how-can-i-obtain-reproducible-optimization-results
     .. [9] https://optuna.readthedocs.io/en/stable/faq.html#how-are-exceptions-from-trials-handled
     .. [10] https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecenv-api-vs-gym-api
+    .. [11] https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#custom-networks
+    .. [12] https://stable-baselines3.readthedocs.io/en/master/common/utils.html#stable_baselines3.common.utils.get_linear_fn
     """
     ppo_cfg = load_conf(cfg_path)["agent"]["PPO"]
 
+    # extract lr sub-config and inject params back into ppo_cfg
+    lr_cfg = ppo_cfg.pop("lr")
+    use_lr_schedule = lr_cfg["lr_linear_schedule"]
+    if use_lr_schedule:
+        for p in ("start", "end", "end_fraction"):
+            ppo_cfg[f"lr_{p}"] = lr_cfg[p]
+    else:
+        ppo_cfg["learning_rate"] = lr_cfg["learning_rate"]
+
+    def _resolve_lr_linear_schedule(params: dict) -> None:
+        """lr_start/lr_end/lr_end_fraction to learning_rate callable for training."""
+        params["learning_rate"] = get_linear_fn(
+            params.pop("lr_start"),
+            params.pop("lr_end"),
+            params.pop("lr_end_fraction"),
+        )
+
     # store params not to be optimized for training
     int_params = ["n_steps", "batch_size", "n_epochs"]
-    float_params = ["learning_rate", "gamma", "gae_lambda", "ent_coef"]
+    float_params = [
+        "learning_rate",
+        "gamma",
+        "gae_lambda",
+        "ent_coef",
+        "vf_coef",
+        "lr_start",
+        "lr_end",
+        "lr_end_fraction",
+    ]
     params2opt = [key for key, value in ppo_cfg.items() if isinstance(value, list)]
     params4training = {
-        hp: ppo_cfg[hp] for hp in int_params + float_params if hp not in params2opt
+        hp: ppo_cfg[hp]
+        for hp in int_params + float_params
+        if hp in ppo_cfg and hp not in params2opt
     }
 
     # ------- HP OPTIMIZATION -------
@@ -395,11 +477,16 @@ def maskablePPO_train(
 
             # merge given value and trial parameters
             trial_params = objective_params4training | MaskablePPO_hp2tune
+            # if linear lr schedule, transform optuna suggested params for learning
+            # rate start, end and end fraction into the schedule to use on training
+            if use_lr_schedule:
+                _resolve_lr_linear_schedule(trial_params)
             # set the agent
             agent = MaskablePPO(
                 policy="MlpPolicy",
                 env=agent_env,
                 verbose=0,
+                policy_kwargs={"net_arch": ppo_cfg.get("net_arch")},  # [11]
                 seed=ppo_cfg["seed"],
                 _init_setup_model=True,
                 **trial_params,
@@ -417,7 +504,11 @@ def maskablePPO_train(
             episode_env.reset(seed=ppo_cfg["seed"])
             # obtain the value to optimize
             _, _, _, _, _, episode_rewards, _ = maskablePPO_episode(
-                start_state=env_kwargs["start_env"],
+                start_state=(
+                    env_kwargs["start_env"]
+                    if episode_env.n_states_stack is None
+                    else np.array(episode_env._norm_states_memory.memory).flatten()
+                ),  # CAUTION: if modified make sure states stack has dtype `State_norm`
                 agent=agent,
                 env=episode_env,
                 deterministic=True,
@@ -484,31 +575,38 @@ def maskablePPO_train(
     )
 
     with timer(tag="train_time") as train_time:
+        # employ scheduler for training if selected
+        if use_lr_schedule:
+            _resolve_lr_linear_schedule(train_params)
+
         # set the agent
         agent = MaskablePPO_custom(
             policy="MlpPolicy",
             env=monitored_env,
             verbose=2 if verbose else 1,
+            policy_kwargs={"net_arch": ppo_cfg.get("net_arch")},  # [11]
             seed=ppo_cfg["seed"],
             _init_setup_model=True,
             **train_params,
         )
         # train it and capture training outputs
+        greedy_env = env(**env_kwargs)
         with Capturing() as learn_outputs:
             agent.learn(
                 total_timesteps=ppo_cfg["total_timesteps"],
                 progress_bar=verbose,
                 use_masking=use_masking,
                 greedy_check_interval=ppo_cfg["greedy_check_interval"],
-                greedy_env=env(**env_kwargs),
+                greedy_env=greedy_env,
             )
     # save it
     agent.save(f"{path_out}/{path_out.stem}")
 
     if monitor_train:
-        n_explored_episodes = env_monitor_outputs(monitored_env, env, path_out, verbose)
+        n_explored_episodes = env_monitor_outputs(monitored_env, path_out, verbose)
         agent_training_outputs(learn_outputs, agent, path_out)
 
+    greedy_env.close()
     monitored_env.close()
     return (
         agent,
