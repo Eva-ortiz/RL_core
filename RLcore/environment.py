@@ -390,7 +390,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         logging.info(self.envidx_logging + f"Selected action: {next_action_name}")
 
         # ------- NEXT STATE & REWARD -------
-        # TODO: Developer must encode here ALL the logic to perform the
+        # Developer instruction: encode here ALL the logic to perform the
         # transition from the state (s) to next state (s') due to input action
         # (a), giving with it the reward value (r)
 
@@ -693,7 +693,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             # normalize each per-action global feature [4 EXAMPLE]
             norm_state[idxs] = state_global[
                 global_cols
-            ].to_numpy()  # TODO: / MAX VALUES
+            ].to_numpy()  # Developer instruction: divide by the max values (/ MAX_VALUES)
         return norm_state
 
     def _termination(self, state: State) -> bool:
@@ -714,7 +714,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             self.termination_condition == "Developer insert value: StrEnum"
             or self.termination_condition == "Developer insert value: StrEnum"
         ):
-            terminated = "TODO : boolean comparison with state input (e.g.)"
+            terminated = "Developer instruction: boolean comparison with state input"
         else:
             raise NotImplementedError(
                 f"{self.termination_condition} termination not implemented."

@@ -86,7 +86,7 @@ def maskedPPO_agent(
             use_masking=use_masking,
         )
 
-        # TODO: post-process relevant data:
+        # Developer instruction: post-process relevant data:
         #   - policy representation: episode_actions, episode_state1s, episode_state2s
         #   - policy data : episode_rewards and return, training times, number
         #     of explored episodes
@@ -273,7 +273,7 @@ if __name__ == "__main__":
         env="Developer insert value: gym.Env class (not object)",
         train=False,  # allow to train
         episode_eval=True,  # allow for greedy episode
-        use_masking="TODO : depending of the env",
+        use_masking="Developer instruction: set True/False depending on the env",
         monitor_train=True,
         verbose=False,
         env_kwargs="Developer insert value: env kwargs dict",
