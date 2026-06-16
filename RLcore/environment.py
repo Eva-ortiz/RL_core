@@ -144,11 +144,14 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         self.n_states_stack = n_states_stack
 
         # store relevant names
-        self.action_col = "TODO : str"
-        self.state_col_1, self.state_col_2 = "TODO : str", "TODO : str"
+        self.action_col = "Developer insert value: str"
+        self.state_col_1, self.state_col_2 = (
+            "Developer insert value: str",
+            "Developer insert value: str",
+        )
         self.global_state_col_1, self.global_state_col_2 = (
-            "TODO : str",
-            "TODO : str",
+            "Developer insert value: str",
+            "Developer insert value: str",
         )  # if `global_obs`
 
         # Store relation between action number and its name, sorted
@@ -187,8 +190,8 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             )
         ).tolist()
         self.env_cols = self.global_state_cols + [
-            "TODO : str",
-            "TODO : str",
+            "Developer insert value: str",
+            "Developer insert value: str",
         ]  # [4 EXAMPLE]
 
         # initialize some counters, store current and initial environment and
@@ -387,19 +390,19 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         logging.info(self.envidx_logging + f"Selected action: {next_action_name}")
 
         # ------- NEXT STATE & REWARD -------
-        # TODO: Developer must encode here ALL the logic to perform the
+        # Developer instruction: encode here ALL the logic to perform the
         # transition from the state (s) to next state (s') due to input action
         # (a), giving with it the reward value (r)
 
         # retrieve next state
-        next_state = "TODO : State"
+        next_state = "Developer insert value: State"
 
         # compute the return
-        reward = "TODO : Reward"  # [4 EXAMPLE]
+        reward = "Developer insert value: Reward"  # [4 EXAMPLE]
         self.rl_return += reward
 
         # add relevant info
-        info["info_1"] = "TODO : Any"  # [4 EXAMPLE]
+        info["info_1"] = "Developer insert value: Any"  # [4 EXAMPLE]
 
         logging.debug(self.envidx_logging + f"Info: {info}")
 
@@ -415,12 +418,14 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         # if global observation, recompute and store the global features at
         # the new state (they may change at every step)
         if self.global_obs:
-            self.current_env[self.global_state_cols] = "TODO : State"
+            self.current_env[self.global_state_cols] = "Developer insert value: State"
 
         # normalize the observation (single, plus global features if `global_obs`)
         norm_next_state = self._normalize_state_values(self.current_env)
 
-        self.current_env[self.env_cols] = "TODO : Environment"  # [4 EXAMPLE]
+        self.current_env[self.env_cols] = (
+            "Developer insert value: Environment"  # [4 EXAMPLE]
+        )
 
         # if states stack, push the new state and stack the last `n_states_stack`
         if self.n_states_stack is not None:
@@ -487,7 +492,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         dict[str, Any]
             Additional information, i.e. metrics, debug info.
         """
-        info = {"info_1": "TODO : Any"}  # [4 EXAMPLE]
+        info = {"info_1": "Developer insert value: Any"}  # [4 EXAMPLE]
 
         # For Custom environments, the first line of reset() should be
         # super().reset(seed=seed) which implements numpy seeding correctly. [5]
@@ -556,7 +561,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         random_n = self.np_random.random(size=len(self.env_cols))
 
         # get a random value between min and max vals
-        min_val, max_val = "TODO : float", "TODO : float"  # [4 EXAMPLE]
+        min_val, max_val = (
+            "Developer insert value: float",
+            "Developer insert value: float",
+        )  # [4 EXAMPLE]
         rand_values = (max_val - min_val) * random_n + min_val  # [4 EXAMPLE]
 
         env = pd.Series(
@@ -626,11 +634,11 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         ]
 
         # normalize var1
-        max_var_1 = "TODO : float"  # [4 EXAMPLE]
+        max_var_1 = "Developer insert value: float"  # [4 EXAMPLE]
         norm_state[var_idx_1] = state[self.state_col_1] / max_var_1
 
         # normalize cyclic var2
-        periodicity_var_2 = "TODO : float"  # [4 EXAMPLE]
+        periodicity_var_2 = "Developer insert value: float"  # [4 EXAMPLE]
         norm_state[var_idx_2] = np.sin(
             2 * np.pi * state[self.state_col_2] / periodicity_var_2
         )
@@ -685,7 +693,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             # normalize each per-action global feature [4 EXAMPLE]
             norm_state[idxs] = state_global[
                 global_cols
-            ].to_numpy()  # TODO: / MAX VALUES
+            ].to_numpy()  # Developer instruction: / MAX_VALUES
         return norm_state
 
     def _termination(self, state: State) -> bool:
@@ -703,10 +711,10 @@ class ENV(gym.Env):  # type: ignore[type-arg]
         """
         # if more than one termination condition [4 EXAMPLE]
         if (
-            self.termination_condition == "TODO : StrEnum"
-            or self.termination_condition == "TODO : StrEnum"
+            self.termination_condition == "Developer insert value: StrEnum"
+            or self.termination_condition == "Developer insert value: StrEnum"
         ):
-            terminated = "TODO : boolean comparison with state input (e.g.)"
+            terminated = "Developer instruction: boolean comparison with state input"
         else:
             raise NotImplementedError(
                 f"{self.termination_condition} termination not implemented."
