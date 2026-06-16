@@ -87,6 +87,8 @@ addopts = ["-ra", "--strict-config", "--strict-markers"]
 filterwarnings = ["error", "ignore::DeprecationWarning"]
 
 [tool.uv]
+# Exclude packages published in the last 7 days to mitigate supply chain attacks
+exclude-newer = "7 days"
 # Hold transitive deps that affect training/model (de)serialization for reproducibility
 constraint-dependencies = ["torch==2.5.1", "cloudpickle==3.1.0", "scipy==1.14.1"]
 dev-dependencies = [
