@@ -1,3 +1,8 @@
+
+# ----------- Random search algorithm config -----------
+[agent.random]
+timesteps = 1e7
+
 # ----------- logging config -----------
 [logging]
 debug_counter = 1000
