@@ -567,7 +567,7 @@ def maskablePPO_train(
 
     # select final training hiperparameters
     train_params = (
-        params4training | best_agent.params if params2opt else params4training
+        (params4training | best_agent.params) if params2opt else params4training
     )
 
     with timer(tag="train_time") as train_time:
