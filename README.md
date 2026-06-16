@@ -27,8 +27,6 @@ The route optimization work above is built on the following `RLcore` modules:
 
 The repository is structured into the following directories:
 
-- `/data`: data folder.
-- `/img`: images folder.
 - `/notebook`: notebooks with analysis, experiments or examples.
 - `/RLcore`: Python source code of the repository.
 - `/script`: `.sh` scripts.
