@@ -192,7 +192,6 @@ def agent_training_outputs(
 
 def env_monitor_outputs(
     monitored_env: VecEnv | Monitor_custom,
-    env: gym.Env,
     path_out: Path,
     verbose: bool = False,
 ):
@@ -203,8 +202,6 @@ def env_monitor_outputs(
     monitored_env : VecEnv | Monitor_custom
         Monitor wrapped gym environment, vectorized or not, where the agent is
         trained.
-    env : gym.Env
-        Gym environment where the agent is trained.
     path_out : Path
         Folder where monitor plots and csv will be saved.
     verbose : bool, optional
@@ -251,10 +248,17 @@ def env_monitor_outputs(
         # output the information of the episode with best return
         if verbose:
             idx_max_return = np.argmax(episode_records["episode_returns"])
-            action_list_max_return = [
-                env.action_idx_to_name(action_idx)
-                for action_idx in episode_records["episode_actions"][idx_max_return]
-            ]
+            best_actions = episode_records["episode_actions"][idx_max_return]
+            action_list_max_return = (
+                [
+                    monitored_env.env_method("action_idx_to_name", action)[n_env]
+                    for action in best_actions
+                ]
+                if isinstance(monitored_env, VecEnv)
+                else [
+                    monitored_env.action_idx_to_name(action) for action in best_actions
+                ]
+            )
             logging.info(
                 f"env {n_env}: Actions list of episode with max return\n"
                 f"{action_list_max_return}"
@@ -272,6 +276,7 @@ def env_monitor_outputs(
             plt.ylabel(ylabel)
             plt.plot(episode_records[var])
             plt.savefig(f"{path_out}/{ylabel.split(' ')[0]}_vs_episodes_env{n_env}.png")
+            plt.close()
 
         # write actions, rewards, returns, n_experiences and runtimes of each
         # episode during training into a csv
@@ -598,7 +603,7 @@ def maskablePPO_train(
     agent.save(f"{path_out}/{path_out.stem}")
 
     if monitor_train:
-        n_explored_episodes = env_monitor_outputs(monitored_env, env, path_out, verbose)
+        n_explored_episodes = env_monitor_outputs(monitored_env, path_out, verbose)
         agent_training_outputs(learn_outputs, agent, path_out)
 
     greedy_env.close()
