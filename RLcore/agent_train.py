@@ -531,7 +531,7 @@ def maskablePPO_train(
 
         # ------- PRINT OPTIMIZATION RESULTS [7] -------
         logging.info(
-            "Number of trials fail / complete: ",
+            "Number of trials fail / complete: \n%s",
             study.trials_dataframe().groupby("state").count()["number"],
         )
         logging.info("Best trial:")
