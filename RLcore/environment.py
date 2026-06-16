@@ -434,7 +434,7 @@ class ENV(gym.Env):  # type: ignore[type-arg]
             norm_next_state = np.array(self._norm_states_memory.memory).flatten()
 
         # add termination / truncated conditions
-        terminated = "TODO : boolean comparison (e.g.)"  # [4 EXAMPLE]
+        terminated = self._termination(state=next_state[self.single_state_cols])
         if terminated:
             logging.info(
                 self.envidx_logging + "Terminated, (To developer: add the reason)."
