@@ -384,6 +384,68 @@ def random_search(
     )
 
 
+def random_agent(
+    env: gym.Env,
+    train: bool,
+    run_seeds: int | list[int | None] | None = None,
+    model_path: Path = Path("./models/random"),
+    conf_path: str = "./config.toml",
+    **env_kwargs,
+):
+    """Discover the best episode from random exploration within `env`.
+
+    See Also
+    --------
+    random_search : algorithm to perform the random search in the environment.
+    """
+    if run_seeds is None:
+        run_seeds = [None]
+    elif isinstance(run_seeds, int):
+        run_seeds = [run_seeds]
+
+    if train:
+        cfg_random = load_conf(conf_path)["agent"]["random"]
+        search_env = env(**env_kwargs)
+
+        # ------ EPISODE SEARCH ------
+        logging.info("Looking for the best episode with random search...")
+        with timer(tag="train_time") as train_time:
+            results = []
+            for seed in run_seeds:
+                logging.info(f"\n\tSeed {seed}\n")
+                (
+                    best_episode_actions,
+                    best_episode_rewards,
+                    best_episode_state1s,
+                    best_episode_state2s,
+                    best_episode_info,
+                    return_sequence,
+                    step_sequence,
+                    n_exp_sequence,
+                ) = random_search(
+                    timesteps=cfg_random["timesteps"], env=search_env, seed=seed
+                )
+                results.append(
+                    {
+                        "best_actions": best_episode_actions,
+                        "best_rewards": best_episode_rewards,
+                        "best_state1s": best_episode_state1s,  # [4 EXAMPLE]
+                        "best_state2s": best_episode_state2s,  # [4 EXAMPLE]
+                        "returns": return_sequence,
+                        "experiences": n_exp_sequence,
+                        "steps": step_sequence,
+                        "best_infos": best_episode_info,
+                    }
+                )
+                # Developer instruction: post-process relevant info of best episode
+            df_results = pd.DataFrame(results)
+            df_results.to_csv(f"{model_path}/random_train_results_seed_{run_seeds}.csv")
+        logging.info(f"Search time: {train_time():.2f} s")
+        search_env.close()
+
+    print("RANDOM SEARCH IS DONE!")
+
+
 if __name__ == "__main__":
     maskedPPO_agent(
         env="Developer insert value: gym.Env class (not object)",
@@ -405,5 +467,11 @@ if __name__ == "__main__":
         monitor_train=True,
         logging_level="warn",
         seed=None,
+        env_kwargs="Developer insert value: env kwargs dict",
+    )
+    random_agent(
+        env="Developer insert value: gym.Env class (not object)",
+        train=True,  # allow to perform the random search
+        run_seeds=None,
         env_kwargs="Developer insert value: env kwargs dict",
     )
