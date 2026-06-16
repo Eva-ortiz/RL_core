@@ -1,11 +1,12 @@
 import datetime as dt
 import logging
 import sys
-import time
 import warnings
+from contextlib import contextmanager
 from io import StringIO
 from math import floor, log10
 from pathlib import Path
+from timeit import default_timer
 
 import pandas as pd
 import tomli
@@ -65,40 +66,21 @@ def scientific_notation_label(number: float) -> str:
     return label
 
 
-def timer(start: time, end: time, label: str = "Execution"):
-    """Print elapsed time.
-
-    Parameters
-    ----------
-    start : time
-        Start time.
-    end : time
-        End time.
-    label : str, optional
-        Optional label for output message.
-        By default, "Execution".
-
-    References
-    ----------
-    .. [1] https://stackoverflow.com/questions/27779677/how-to-format-elapsed-time-from-seconds-to-hours-minutes-seconds-and-milliseco
-
-    Examples
-    --------
-    logging.basicConfig(level=logging.INFO)
-
-    start = time.time()
-    output = main()
-    end = time.time()
-
-    timer(start, end)
-    """
-    hours, rem = divmod(end - start, 3600)
-    minutes, seconds = divmod(rem, 60)
-    print(
-        f"------ {label} time: {{:0>2}}:{{:0>2}}:{{:05.2f}} ------".format(
-            int(hours), int(minutes), seconds
+@contextmanager
+def timer(tag=None):
+    """Timer contextmanager."""
+    start = default_timer()
+    elapsed = None
+    try:
+        yield lambda: elapsed
+    finally:
+        end = default_timer()
+        elapsed = end - start
+        header = (
+            "Elapsed time (D:H:M)" if tag is None else f"[{tag}] Elapsed time (D:H:M)"
         )
-    )
+        days, hours, minutes = sec_2_day_hour_min(elapsed)
+        print(f"{header}: {days}:{hours}:{minutes:.3f}")
 
 
 def set_logging(level: str = "debug"):

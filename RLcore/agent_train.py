@@ -528,16 +528,16 @@ def maskablePPO_train(
             sampler = optuna.samplers.TPESampler(seed=ppo_cfg["seed_optuna"])  # [8]
             study = optuna.create_study(sampler=sampler, direction="maximize")  # [5]
 
-        # invoke optimization of the objective function
-        # WARNING:`n_jobs` must be 1 in order to not lose squential dependent
-        # variables such as `terminated`, `_visited_actions_memory`, etc.
-        study.optimize(
-            objective, n_trials=ppo_cfg["n_trials"], n_jobs=1, catch=ValueError
-        )  # [6], [9]
+            # invoke optimization of the objective function
+            # WARNING:`n_jobs` must be 1 in order to not lose squential dependent
+            # variables such as `terminated`, `_visited_actions_memory`, etc.
+            study.optimize(
+                objective, n_trials=ppo_cfg["n_trials"], n_jobs=1, catch=ValueError
+            )  # [6], [9]
 
         # ------- PRINT OPTIMIZATION RESULTS [7] -------
         logging.info(
-            "Number of trials fail / complete: ",
+            "Number of trials fail / complete: \n%s",
             study.trials_dataframe().groupby("state").count()["number"],
         )
         logging.info("Best trial:")
