@@ -1,6 +1,5 @@
 import logging
 import sys
-import time
 from pathlib import Path
 from typing import Literal
 
@@ -202,9 +201,6 @@ def approximated_simulation(
     agent_class = DQN_agent if algorithm == "double_Q-learning" else DRL_agent
 
     if train:
-        # store start time of the program
-        start_time = time.time()
-
         # create the RHT environment
         train_env = env(**env_kwargs)
 
@@ -218,23 +214,22 @@ def approximated_simulation(
             hidden_neur=cfg_hiperpar["hidden_neur"],
         )
 
-        agent.train(
-            device=device,
-            environment=train_env,
-            plot_learning_curves=monitor_train,
-            save_q_net=True,
-            reward_curve_mode=cfg_env["plots"]["reward_curve_mode"],
-            reward_curve_steps_per_point=cfg_env["plots"][
-                "reward_curve_steps_per_point"
-            ],
-            debug_counter=cfg_logging["debug_counter"],
-            seed=seed,
-            **cfg_hiperpar["train"],
-        )
+        with timer(tag="train_time") as train_time:
+            agent.train(
+                device=device,
+                environment=train_env,
+                plot_learning_curves=monitor_train,
+                save_q_net=True,
+                reward_curve_mode=cfg_env["plots"]["reward_curve_mode"],
+                reward_curve_steps_per_point=cfg_env["plots"][
+                    "reward_curve_steps_per_point"
+                ],
+                debug_counter=cfg_logging["debug_counter"],
+                seed=seed,
+                **cfg_hiperpar["train"],
+            )
 
-        # print execution time of this problem
-        timer(start_time, time.time())
-
+        logging.info(f"Training time: {train_time():.2f} s")
         logging.info(f"""Number of visited states: {len(agent.visited_states_norm)}""")
 
     # ------------- output relevant data -------------
