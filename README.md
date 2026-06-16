@@ -27,22 +27,21 @@ The route optimization work above is built on the following `RLcore` modules:
 
 The repository is structured into the following directories:
 
-- `/notebook`: notebooks with analysis, experiments or examples.
 - `/RLcore`: Python source code of the repository.
 - `/script`: `.sh` scripts.
-- `/tests`: Python code for testing via pytest.
+<!-- - `/tests`: Python code for testing via pytest. -->
 
 Set of workflows via Github Actions already installed:
 
 - `pre-commit`: run pre-commit hooks
-- `pytest`: automatically discover and runs tests in `tests/`
+<!-- - `pytest`: automatically discover and runs tests in `tests/` -->
 
 Tools:
 
 - [uv](https://docs.astral.sh/uv/): manage dependencies, Python versions and virtual environments
 - [ruff](https://docs.astral.sh/ruff/): lint and format Python code
 <!-- - [mypy](https://mypy.readthedocs.io/): check types -->
-- [pytest](https://docs.pytest.org/en/): run unit tests
+<!-- - [pytest](https://docs.pytest.org/en/): run unit tests -->
 - [pre-commit](https://pre-commit.com/): manage pre-commit hooks
 - [prettier](https://prettier.io/): format YAML and Markdown
 - [codespell](https://github.com/codespell-project/codespell): check spelling in source code
@@ -149,11 +148,11 @@ make hooks
 make ruff
 ```
 
-#### Run tests
+<!-- #### Run tests
 
 ```{bash}
 make test
-```
+``` -->
 
 <!-- #### Run type checker
 
