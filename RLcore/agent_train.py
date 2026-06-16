@@ -343,8 +343,7 @@ def maskablePPO_train(
     * Training graphs are only given for the agent trained with the optimal
       hiperparameters, found by Optuna.
     In order to not modify Stable-Baselines3, info output of training steps will
-    not be retrieved. However, during training:
-    * Missing uv data can be tracked setting logging level to DEBUG.
+    not be retrieved.
 
     Notes
     -----

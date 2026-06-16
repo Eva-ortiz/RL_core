@@ -192,16 +192,12 @@ def check_bool_or_float(value: bool | float):
     return bool_val, float_val
 
 
-# --------------- config utils --------------- By Komorebi AI Technologies
+# --------------- config utils ---------------
 class Conf(dict):
     """Allow for keys not in the original dict, defaulting to None.
 
     Sub-class of dict that overrides `__getitem__` to allow for keys not in
     the original dict, defaulting to None.
-
-    Author
-    ------
-    Komorebi AI Technologies
     """
 
     def __init__(self, *args, **kwargs):
@@ -244,10 +240,6 @@ def load_conf(path: str | Path, key: str = None) -> Conf:
     -------
     Conf
         Config dictionary
-
-    Author
-    ------
-    Komorebi AI Technologies
     """
     with open(path, "rb") as f:
         config = tomli.load(f)
@@ -260,10 +252,6 @@ def parse_str(x: str):
     - If x is "none", returns None
     - If x is numeric, returns int(x) or float(x)
     - In any other case, returns the original x
-
-    Author
-    ------
-    Komorebi AI Technologies
     """
     if not isinstance(x, str):  # Only True when value is not str
         return x
@@ -278,22 +266,12 @@ def parse_str(x: str):
 
 
 def parse_list(ser: list) -> list:
-    """Parse the elements of a list.
-
-    Author
-    ------
-    Komorebi AI Technologies
-    """
+    """Parse the elements of a list."""
     return [parse_str(x) for x in ser]
 
 
 def parse_dict(d: dict) -> dict:
-    """Parse of the elements of a dictionary.
-
-    Author
-    ------
-    Komorebi AI Technologies
-    """
+    """Parse of the elements of a dictionary."""
     out_d = d.copy()
     for key, value in d.items():
         if isinstance(value, dict):
@@ -306,12 +284,7 @@ def parse_dict(d: dict) -> dict:
 
 
 def isfloat(value):
-    """Return True when the value can be converted to float.
-
-    Author
-    ------
-    Komorebi AI Technologies
-    """
+    """Return True when the value can be converted to float."""
     try:
         float(value)
         return True

@@ -1,10 +1,13 @@
 import logging
+import random
 import sys
+from collections import deque
 from pathlib import Path
 from typing import Literal
 
 import gymnasium as gym
 import numpy as np
+import pandas as pd
 import torch
 from agent_predict import maskablePPO_episode
 from agent_train import maskablePPO_train
@@ -34,8 +37,7 @@ def maskedPPO_agent(
     Warnings
     --------
     In order to not modify Stable-Baselines3, info output of training steps will
-    not be retrieved. However, during training:
-    * Missing uv data can be tracked setting logging level to DEBUG.
+    not be retrieved.
 
     See Also
     --------
@@ -263,6 +265,187 @@ def approximated_simulation(
     print("DEEP REINFORCEMENT LEARNING IS DONE!")
 
 
+def random_search(
+    timesteps: int, env: gym.Env, seed: int | None = None
+) -> tuple[list, list, list, list, list, list, list, list]:
+    """Discover the best episode from random search in input env.
+
+    Parameters
+    ----------
+    timesteps : int
+        Number of timesteps to execute the random search.
+    env : gym.Env
+        Initialized Gym environment object where the search will explore.
+    seed : int | None, optional
+        Seed for environment reset initialization and random module. If None, a
+        seed for the environment will be chosen from some source of entropy.
+
+    Returns
+    -------
+    best_action_sequence : list
+        Best episode actions, in order.
+    best_reward_sequence : list
+        Best episode rewards, in order.
+    best_state1_sequence : list
+        Best episode feature 1 of the state, in order.
+    best_state2_sequence : list
+        Best episode feature 2 of the state, in order.
+    best_info_sequence : list
+        Best episode steps info, in order.
+    return_sequence : list
+        Returns obtained for each explored episode, in order.
+    episode_step_sequence : list
+        Number of the exploration step of the end of each episode, in order.
+    n_exp_sequence : list
+        Number of experiences of each explored episode, in order.
+    """
+    info_list = []
+    # reset the environment and random to initialize their random number
+    if seed is not None:
+        random.seed(seed)
+    env.reset(seed=seed)
+
+    # initialize best return sequence
+    best_action_sequence, best_reward_sequence = [], [-np.inf]
+    best_state1_sequence, best_state2_sequence, best_info_sequence = [], [], []
+    return_sequence, episode_step_sequence, n_exp_sequence = [], [], []
+
+    # sequence of values to keep track of performed actions
+    # start the track from initialized environment
+    action_seq = deque([env.current_env[env.action_col]])
+    reward_seq = deque([0])
+    state1_seq = deque([env.current_env[env.state_col_1]])  # [4 EXAMPLE]
+    state2_seq = deque([env.current_env[env.state_col_2]])  # [4 EXAMPLE]
+    n_exp_episode = 0
+    for step in range(int(timesteps)):
+        # select a random action from those not masked
+        not_masked_actions = [
+            idx for idx, not_mask in enumerate(env.action_masks()) if not_mask
+        ]
+        if not not_masked_actions:
+            raise RuntimeError(
+                f"No available actions at step {step} but episode was not "
+                "previously terminated or truncated."
+            )
+        random_action = random.choice(not_masked_actions)
+        logging.debug(f"Available actions at step {step}: {not_masked_actions}")
+
+        # do it in the environment
+        _, reward, terminated, truncated, info = env.step(random_action)
+
+        # store episode values
+        action_seq.append(env.action_idx_to_name(random_action))
+        reward_seq.append(reward)
+        state1_seq.append(env.current_env[env.state_col_1])  # [4 EXAMPLE]
+        state2_seq.append(env.current_env[env.state_col_2])  # [4 EXAMPLE]
+        # store output info
+        info_list.append(info)
+        # add one to number of experiences of current episode
+        n_exp_episode += 1
+
+        # restart the environment if terminated or truncated
+        if terminated or truncated:
+            env.reset()
+
+            # check if last episode was the best and store it if it is
+            rl_return = sum(reward_seq)
+            if rl_return > sum(best_reward_sequence):
+                best_reward_sequence = list(reward_seq)
+                best_action_sequence = list(action_seq)
+                best_state1_sequence = list(state1_seq)  # [4 EXAMPLE]
+                best_state2_sequence = list(state2_seq)  # [4 EXAMPLE]
+                best_info_sequence = info_list
+                logging.info(
+                    f"Best episode with return {rl_return} obtained in step {step}."
+                )
+
+            # save return track
+            return_sequence.append(rl_return)
+            episode_step_sequence.append(step)
+            n_exp_sequence.append(n_exp_episode)
+
+            # reset tracked episode
+            action_seq = deque([env.current_env[env.action_col]])
+            reward_seq = deque([0])
+            state1_seq = deque([env.current_env[env.state_col_1]])  # [4 EXAMPLE]
+            state2_seq = deque([env.current_env[env.state_col_2]])  # [4 EXAMPLE]
+            info_list = []
+            n_exp_episode = 0
+
+    return (
+        best_action_sequence,
+        best_reward_sequence,
+        best_state1_sequence,  # [4 EXAMPLE]
+        best_state2_sequence,  # [4 EXAMPLE]
+        best_info_sequence,
+        return_sequence,
+        episode_step_sequence,
+        n_exp_sequence,
+    )
+
+
+def random_agent(
+    env: gym.Env,
+    train: bool,
+    run_seeds: int | list[int | None] | None = None,
+    model_path: Path = Path("./models/random"),
+    conf_path: str = "./config.toml",
+    **env_kwargs,
+):
+    """Discover the best episode from random exploration within `env`.
+
+    See Also
+    --------
+    random_search : algorithm to perform the random search in the environment.
+    """
+    if run_seeds is None:
+        run_seeds = [None]
+    elif isinstance(run_seeds, int):
+        run_seeds = [run_seeds]
+
+    if train:
+        cfg_random = load_conf(conf_path)["agent"]["random"]
+        search_env = env(**env_kwargs)
+
+        # ------ EPISODE SEARCH ------
+        logging.info("Looking for the best episode with random search...")
+        with timer(tag="train_time") as train_time:
+            results = []
+            for seed in run_seeds:
+                logging.info(f"\n\tSeed {seed}\n")
+                (
+                    best_episode_actions,
+                    best_episode_rewards,
+                    best_episode_state1s,
+                    best_episode_state2s,
+                    best_episode_info,
+                    return_sequence,
+                    step_sequence,
+                    n_exp_sequence,
+                ) = random_search(
+                    timesteps=cfg_random["timesteps"], env=search_env, seed=seed
+                )
+                results.append(
+                    {
+                        "best_actions": best_episode_actions,
+                        "best_rewards": best_episode_rewards,
+                        "best_state1s": best_episode_state1s,  # [4 EXAMPLE]
+                        "best_state2s": best_episode_state2s,  # [4 EXAMPLE]
+                        "returns": return_sequence,
+                        "experiences": n_exp_sequence,
+                        "steps": step_sequence,
+                        "best_infos": best_episode_info,
+                    }
+                )
+                # Developer instruction: post-process relevant info of best episode
+            df_results = pd.DataFrame(results)
+            df_results.to_csv(f"{model_path}/random_train_results_seed_{run_seeds}.csv")
+        logging.info(f"Search time: {train_time():.2f} s")
+        search_env.close()
+
+    print("RANDOM SEARCH IS DONE!")
+
+
 if __name__ == "__main__":
     maskedPPO_agent(
         env="Developer insert value: gym.Env class (not object)",
@@ -284,5 +467,11 @@ if __name__ == "__main__":
         monitor_train=True,
         logging_level="warn",
         seed=None,
+        env_kwargs="Developer insert value: env kwargs dict",
+    )
+    random_agent(
+        env="Developer insert value: gym.Env class (not object)",
+        train=True,  # allow to perform the random search
+        run_seeds=None,
         env_kwargs="Developer insert value: env kwargs dict",
     )
