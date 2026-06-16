@@ -291,7 +291,7 @@ def maskablePPO_train(
     cfg_path: str = "./config.toml",
     path_out: Path = Path("./models/maskedppo"),
     **env_kwargs,
-) -> tuple[MaskablePPO, float, int, float | None]:
+) -> tuple[MaskablePPO, float, int | None, float | None]:
     """Train an agent with StableBaselines3 Contrib Maskable PPO algorithm.
 
     Hiperparameter optimization via Optuna can be selected providing a range of
@@ -325,8 +325,9 @@ def maskablePPO_train(
         Trained agent.
     train_time : float
         Training time of the returned agent.
-    n_explored_episodes : int
+    n_explored_episodes : int | None
         Number of episodes explored by the environment during training.
+        None if ``monitor_train`` is False.
     optuna_time : float | None
         Time of hyperparameter optimization.
 
@@ -597,6 +598,7 @@ def maskablePPO_train(
     # save it
     agent.save(f"{path_out}/{path_out.stem}")
 
+    n_explored_episodes = None
     if monitor_train:
         n_explored_episodes = env_monitor_outputs(monitored_env, env, path_out, verbose)
         agent_training_outputs(learn_outputs, agent, path_out)
