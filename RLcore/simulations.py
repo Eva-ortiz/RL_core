@@ -34,8 +34,7 @@ def maskedPPO_agent(
     Warnings
     --------
     In order to not modify Stable-Baselines3, info output of training steps will
-    not be retrieved. However, during training:
-    * Missing uv data can be tracked setting logging level to DEBUG.
+    not be retrieved.
 
     See Also
     --------
