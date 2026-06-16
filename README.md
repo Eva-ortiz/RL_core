@@ -1,6 +1,6 @@
 # Reinforcement Learning core
 
-![testing workflow](https://github.com/Eva-ortiz/RL_core/actions/workflows/pytest.yml/badge.svg)
+<!-- ![testing workflow](https://github.com/Eva-ortiz/RL_core/actions/workflows/pytest.yml/badge.svg) -->
 
 <!-- [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/) -->
 
