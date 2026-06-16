@@ -14,7 +14,15 @@ Some related publications:
 - Ortiz-Mansilla, E. & García-Esteban, J.J. & Bravo-Abad, J. & Cuevas, J.C. (2024). Deep reinforcement learning for radiative heat transfer optimization problems. Physical Review Applied. 22. [10.1103/PhysRevApplied.22.054071](https://journals.aps.org/prapplied/abstract/10.1103/PhysRevApplied.22.054071).
 - Ortiz-Mansilla, E. & Torres-Barrán, A. & Cuevas, J.C (in preparation). A Deep Reinforcement Learning Approach to Fishing Vessel Route Optimization.
 
-The route optimization work above is built on the following `RLcore` modules:
+The radiative heat transfer work (first reference) uses the following `RLcore` functionalities:
+
+- `simulations.py`: orchestration of agent training and evaluation.
+- `DRL.py`: value-based deep RL agents (SARSA, Q-learning and double DQN).
+- `utils.py`: shared utilities.
+
+> Complete code of this work is provided in [Deep_RL_RHT](https://github.com/jjgarciae/Deep_RL_RHT).
+
+The route optimization work (second reference) is built on the following `RLcore` modules:
 
 - `environment.py`: custom Gymnasium environment, with invalid action masking.
 - `agent_train.py`: agent training with Maskable PPO and Optuna hyperparameter optimization.
