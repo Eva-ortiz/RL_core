@@ -1,0 +1,11 @@
+[environment.geodesic_path]
+velocity = 5.14
+
+[plot]
+# https://stackoverflow.com/questions/11367736/matplotlib-consistent-font-using-latex
+mathtext_fontset = 'stix'
+font_family = 'STIXGeneral'
+
+xtick_labelsize = 26 # 18
+ytick_labelsize = 26 # 18
+axes_labelsize = 30 # 24

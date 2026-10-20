@@ -1,0 +1,21 @@
+[environment]
+date_format = "%d-%m-%Y %H:%M:%S"
+
+max_transitions = 500
+max_tons = 2000
+max_single_capture = 100
+inf_capture_value = 1000
+synthetic_catch_delta = 10
+path_terminal_latlon = "./data/ports_B.parquet"
+tol_m_to_latlon = 50
+
+paths_buoy_track_csv = ["./data/buoy_track_B2.csv"]
+
+[environment.reward]
+capture_clip = 100 # clip capture if higher, false to avoid clipping
+stop_hours = 5
+time_weight = 0.5
+rescale = false # false to avoid reward rescaling
+
+[environment.buoy_track]
+df_cols = ["KEY_BALIZA", "FECHA", "HORA", "FECHA_HORA", "LATITUD", "LONGITUD", "CAPTURA"] # columns kept from buoy track data
