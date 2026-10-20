@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+requires-python = ">=3.11,<3.12"
+name = "RLroutes_PAPER"
+description = "Optimize maritime routes with Reinforcement Learning."
+version = "1.0.0"
+dependencies = [
+    "pandas>=2.2.3",
+    "xarray==2023.10.1",
+    "gymnasium==1.0.0",
+    "pyproj==3.7.2",
+    "matplotlib>=3.9",
+    "typer-slim>=0.12.5",
+    "numpy==1.23.5",
+    "stable-baselines3==2.4.0",
+    "sb3-contrib==2.4.0",
+    "optuna>=4.2.0",
+    "pyarrow>=18,<26", # pyarrow 26 requires numpy>=2
+    "netcdf4>=1.7.3",
+    "dask>=2026.3.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["RLroutes_PAPER*"]
+
+[tool.setuptools.package-data]
+RLroutes_PAPER = ["*.toml"]
+
+[tool.ruff]
+line-length = 88
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # Pyflakes
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "SIM", # flake8-simplify
+    "I", # isort
+    "D", # pydocstyle
+    "C401",  # flake8-comprehensions: unnecessary-generator-set
+    "C402",  # flake8-comprehensions: unnecessary-generator-dict
+    "C403",  # flake8-comprehensions: unnecessary-list-comprehension-set
+    "C404",  # flake8-comprehensions: unnecessary-list-comprehension-dict
+    "C405",  # flake8-comprehensions: unnecessary-literal-set
+    "W605",  # pycodestyle: invalid-escape-sequence
+]
+
+# Ignore D100 Missing docstring in public module
+ignore = ["D100"]
+[tool.ruff.lint.per-file-ignores]
+# Also ignore `D104` in all `__init__.py` files.
+"__init__.py" = ["D104"]
+"RLroutes_PAPER/utils/conf.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.uv]
+# Exclude packages published in the last 7 days to mitigate supply chain attacks
+exclude-newer = "7 days"
+required-version = ">=0.9.17"
+# Hold transitive deps that affect training/model (de)serialization for reproducibility
+constraint-dependencies = ["torch==2.5.1", "cloudpickle==3.1.0", "scipy==1.14.1"]
+dev-dependencies = [
+    "ipykernel>=6.29.5",
+    "ruff>=0.7.2",
+]
